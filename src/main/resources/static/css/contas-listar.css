@@ -1,0 +1,53 @@
+.tabela-coluna{
+    padding: 10px;
+    border-top: 1px solid #eee;
+    word-break: break-all;
+}
+.tabela-header{
+    padding: 10px;
+    background-color: #0f6674;
+    color: white;
+    border-left: 1px solid white;
+}
+.header{
+    font-weight: bold;
+    font-size: 0.6em;
+    color: #666;
+}
+.valor{
+    color: #000;
+    font-size: 1.3em;
+}
+.delay-warning{
+    color: orange;
+}
+.delay-danger{
+    color: #b21f2d;
+}
+.row-footer div{
+    padding: 0;
+}
+.slct-monthyear{
+    float: right;
+    height: 45px;
+    padding: 10px;
+}
+.tabela-linha{
+    margin-top: 15px;
+    border: 1px solid #eee;
+}
+.even{
+    /*background-color: #efefef;*/
+}
+.fa-check{
+    /**font-size: 30px;**/
+    color: greenyellow;
+}
+
+.fa-times{
+    /**font-size: 30px;**/
+    color: orangered;
+}
+.tabela-linha a{
+    font-size: 1.3em;
+}

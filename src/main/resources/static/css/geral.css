@@ -1,0 +1,12 @@
+.logout-btn{
+    position: relative;
+    top: 10px;
+}
+.form-group input[type=checkbox]{
+    float: right;
+    width: 40px;
+}
+.login-screen{
+    width: 80%;
+    margin: 20% auto;
+}
