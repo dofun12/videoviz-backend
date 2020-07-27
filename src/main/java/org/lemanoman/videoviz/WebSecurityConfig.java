@@ -53,31 +53,27 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-        if (safemode) {
-            http
-                    .csrf().disable()
-                    .authorizeRequests()
-                    .antMatchers(
-                            "/login",
-                            "/static/**",
-                            "/media/**").permitAll()
-                    .anyRequest().authenticated()
-                    .and()
-                    .formLogin().loginPage("/login").permitAll()
-                    .and()
-                    .logout().logoutUrl("/logout");
-        } else {
+        if(safemode){
+            http.exceptionHandling().authenticationEntryPoint(unauthorizedHandler).and()
+                    .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
+                    .authorizeRequests().antMatchers(
+                    "/api/auth/signin", "/",
+                    "/gui/**", "/media/**").permitAll()
+                    .antMatchers("/api/test/**").permitAll()
+                    .anyRequest().authenticated();
+        }else{
             http.cors().and().csrf().disable()
                     .exceptionHandling().authenticationEntryPoint(unauthorizedHandler).and()
                     .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
                     .authorizeRequests().antMatchers(
-                            "/api/auth/signin","/",
-                    "/gui/**","/media/**").permitAll()
+                    "/api/auth/signin", "/",
+                    "/gui/**", "/media/**").permitAll()
                     .antMatchers("/api/test/**").permitAll()
                     .anyRequest().authenticated();
-
-            http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
         }
+
+
+        http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
     }
 
     @Override
