@@ -1,5 +1,6 @@
 package org.lemanoman.videoviz.controller;
 
+import org.lemanoman.videoviz.Constants;
 import org.lemanoman.videoviz.MyResourceHttpRequestHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,7 +22,7 @@ import java.util.zip.GZIPOutputStream;
 
 @CrossOrigin(origins = "*")
 @RestController
-@RequestMapping(value = "/media", produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping(value = Constants.MEDIA_BASE_URL, produces = MediaType.APPLICATION_JSON_VALUE)
 public class MediaController {
     private static final int DEFAULT_BUFFER_SIZE = 10240; // ..bytes = 10KB.
     //private static final long DEFAULT_EXPIRE_TIME = 604800000L; // ..ms = 1 week.

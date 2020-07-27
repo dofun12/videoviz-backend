@@ -20,8 +20,8 @@ public class MvcConfig implements WebMvcConfigurer {
     private String guiLocation;
 
     public void addViewControllers(ViewControllerRegistry registry) {
-        registry.addViewController("/").setViewName("login");
-        registry.addViewController("/login").setViewName("login");
+        //registry.addViewController("/").setViewName("login");
+        //registry.addViewController("/login").setViewName("login");
         registry.addViewController("/list").setViewName("list");
 
     }

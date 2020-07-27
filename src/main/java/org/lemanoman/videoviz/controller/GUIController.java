@@ -23,8 +23,15 @@ public class GUIController {
 
     @GetMapping(value = {"/"})
     public String home(){
-        return "redirect:gui/";
+        File requestedFile = new File(guiLocation + File.separator + "/index.html");
+        if(requestedFile.exists()){
+            return "redirect:gui/";
+        }else{
+            return "redirect:view/home";
+        }
+
     }
+
     @GetMapping(value = {
             "/gui/**"
     })
