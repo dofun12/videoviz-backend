@@ -54,7 +54,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         if(safemode){
-            http.exceptionHandling().authenticationEntryPoint(unauthorizedHandler).and()
+            http.csrf().disable().exceptionHandling().authenticationEntryPoint(unauthorizedHandler).and()
                     .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and()
                     .authorizeRequests().antMatchers(
                     "/api/auth/signin", "/",
