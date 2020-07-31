@@ -2,12 +2,12 @@ package org.lemanoman.videoviz.controller;
 
 import org.lemanoman.videoviz.Constants;
 import org.lemanoman.videoviz.MyResourceHttpRequestHandler;
+import org.lemanoman.videoviz.model.LocationModel;
+import org.lemanoman.videoviz.repositories.LocationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.ServletException;
@@ -28,6 +28,9 @@ public class MediaController {
     //private static final long DEFAULT_EXPIRE_TIME = 604800000L; // ..ms = 1 week.
     private static final long DEFAULT_EXPIRE_TIME = TimeUnit.HOURS.toMillis(1); // ..ms = 1 week.
     private static final String MULTIPART_BOUNDARY = "MULTIPART_BYTERANGES";
+
+    @Autowired
+    private LocationRepository locationRepository;
 
     @Autowired
     private MyResourceHttpRequestHandler handler;
@@ -59,18 +62,24 @@ public class MediaController {
      * https://balusc.omnifaces.org/2009/02/fileservlet-supporting-resume-and.html
      * @param request
      * @param response
-     * @param filename
      * @throws ServletException
      * @throws IOException
      */
-    @GetMapping("/video/{filename}")
-    public void getVideo(HttpServletRequest request, HttpServletResponse response, @PathVariable String filename)
+    @GetMapping("/video/{context}/{filename}")
+    public void getVideo(HttpServletRequest request, HttpServletResponse response, @PathVariable String context, @PathVariable String filename)
             throws ServletException, IOException {
+
+
         // Validate the requested file ------------------------------------------------------------
         boolean content = true;
         // Get requested file by path info.
         // URL-decode the file name (might contain spaces and on) and prepare file object.
-        File file = new File(mp4folder + File.separator + filename + ".mp4");
+        Optional<LocationModel> tryGetLocation  = locationRepository.findByContext(context);
+        if(!tryGetLocation.isPresent() && (tryGetLocation.get().getPath()==null || tryGetLocation.get().getPath().isEmpty()) ){
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+        File file = new File(Constants.getVideoFile(tryGetLocation.get().getPath(),filename + ".mp4"));
         if(!file.exists()){
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
             return;
@@ -323,11 +332,16 @@ public class MediaController {
         handler.handleRequest(request, response);
     }**/
 
-    @GetMapping("/image/{filename}")
-    public HttpEntity<byte[]> getImage(@PathVariable String filename)
+    @GetMapping("/image/{context}/{filename}")
+    public HttpEntity<byte[]> getImage( @PathVariable String context,@PathVariable String filename)
             throws IOException {
 
-        File imgFile = new File(imageLocation + File.separator + filename + ".png");
+        Optional<LocationModel> tryGetLocation  = locationRepository.findByContext(context);
+
+        if(!tryGetLocation.isPresent() && (tryGetLocation.get().getPath()==null || tryGetLocation.get().getPath().isEmpty()) ){
+            return new HttpEntity(HttpStatus.NOT_FOUND);
+        }
+        File imgFile = new File(Constants.getImageFile(tryGetLocation.get().getPath(),filename + ".png"));
         if(!imgFile.exists()){
             imgFile = resourceFile.getFile();
         }

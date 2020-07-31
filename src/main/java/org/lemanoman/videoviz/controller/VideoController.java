@@ -37,12 +37,17 @@ public class VideoController {
     @Value("${addToRealQueue}")
     private Boolean addToRealQueue;
 
+    @Autowired
+    private VideoLocationRepository videoLocationRepository;
 
     @Autowired
     private VideoJDBCRepository jdbcRepository;
 
     @Autowired
     private VideoFileService videoFileService;
+
+    @Autowired
+    private LocationRepository locationRepository;
 
     @Autowired
     private VideoRepository videoRepository;
@@ -93,14 +98,14 @@ public class VideoController {
     public Resposta novo(@RequestBody VideoJS videoJS) {
         try {
             VideoModel videoModel = null;
-            if(videoJS.getIdVideo()==null){
+            if (videoJS.getIdVideo() == null) {
                 videoModel = new VideoModel();
                 videoModel.setCode(getNextCode());
                 videoModel.setInvalid(0);
                 videoModel.setIsdeleted(0);
                 videoModel.setDateAdded(new Timestamp(new Date().getTime()));
                 videoModel.setIsfileexist(1);
-            }else{
+            } else {
                 videoModel = videoRepository.findById(videoJS.getIdVideo()).orElse(new VideoModel());
             }
             videoModel.setOriginalTags(videoJS.getOriginalTags());
@@ -347,50 +352,63 @@ public class VideoController {
         return new Resposta(saved).success();
     }
 
-    @PostMapping("/adicionarArquivo/{idVideo}")
-    public Resposta handleFileUpload(
-            @PathVariable("idVideo") Integer idVideo,
-            @RequestParam("file") MultipartFile file
+    @PostMapping("/upload")
+    public Resposta upload(
+            @RequestParam("idLocation") Integer idLocation,
+            @RequestParam("file") MultipartFile[] files
     ) {
-        String filename = file.getOriginalFilename();
-        StoreResult storeResult = null;
-        try {
-            if (filename != null) {
-                VideoModel vm = videoRepository.findById(idVideo).orElse(null);
-                if (vm != null && vm.getCode() != null) {
-                    storeResult = videoFileService.storeVideo(vm.getCode() + ".mp4", file.getInputStream());
-                    if (storeResult != null) {
-                        vm.setMd5Sum(storeResult.getMd5sum());
-                        if (jdbcRepository.getByMD5(storeResult.getMd5sum()).isEmpty()) {
-                            vm.setInvalid(0);
-                            vm.setIsfileexist(1);
-                            vm.setVideoSize("" + storeResult.getVideoAdded().length());
-                            videoRepository.saveAndFlush(vm);
+        List<VideoJS> videoJSList = new ArrayList<>();
+        if (idLocation != null) {
+            Optional<LocationModel> giveLocation = locationRepository.findById(idLocation);
+            if (giveLocation.isPresent()) {
+                LocationModel locationModel = giveLocation.get();
+                for (MultipartFile file : files) {
+                    try {
+                        String code = getNextCode();
+                        StoreResult storeResult = videoFileService.storeVideo(locationModel.getPath(), code + ".mp4", file.getInputStream());
+                        if (storeResult != null) {
+                            VideoModel videoModel = new VideoModel();
+                            videoModel.setCode(code);
+                            videoModel.setTitle(file.getOriginalFilename());
+                            videoModel.setInvalid(0);
+                            videoModel.setIsdeleted(0);
+                            videoModel.setDateAdded(new Timestamp(new Date().getTime()));
+                            videoModel.setIsfileexist(1);
+                            videoModel.setIdLocation(idLocation);
+                            videoModel.setMd5Sum(storeResult.getMd5sum());
+                            videoModel.setVideoSize(String.valueOf(file.getSize()));
+                            videoRepository.saveAndFlush(videoModel);
 
-                            ObjectMapper mapper = new ObjectMapper();
-                            ObjectNode node = mapper.convertValue(vm, ObjectNode.class);
-                            node.put("filepath", storeResult.getVideoAdded().getAbsolutePath());
-                            return new Resposta(jdbcRepository.getInfoAsJS(vm.getIdVideo())).success();
+                            VideoJS videoJS = new VideoJS();
+                            videoJS.setCode(code);
+                            videoJS.setIdVideo(videoModel.getIdVideo());
+                            videoJS.setMd5Sum(storeResult.getMd5sum());
+                            String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                                    .path("/media/image/")
+                                    .path(locationModel.getContext())
+                                    .path("/")
+                                    .path(code)
+                                    .queryParam("time", new Date().getTime() / 1000)
+                                    .toUriString();
 
-                        } else {
-                            throw new Exception("Video já existe");
+                            videoJS.setImageUrl(imageUrl);
+                            videoJS.setVideoSize(videoModel.getVideoSize());
+                            videoJSList.add(videoJS);
                         }
-                    } else {
-                        throw new Exception("Erro ao salvar o arquivo");
+
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
                     }
-                } else {
-                    throw new Exception("Sem codigo relacionado");
                 }
-            } else {
-                throw new Exception("Erro ao salvar o arquivo");
+                return new Resposta(videoJSList).success();
+            }else{
+                return new Resposta().failed("Localizacao Invalida");
             }
-        } catch (Exception e) {
-            if (storeResult != null && storeResult.getVideoAdded() != null) {
-                storeResult.getVideoAdded().delete();
-            }
-            e.printStackTrace();
-            return new Resposta().failed(e);
+
         }
+
+        return new Resposta().success();
+
     }
 
 
@@ -400,9 +418,9 @@ public class VideoController {
 
         String oldCode = jdbcRepository.getLastCode();
         Integer intCode;
-        if(oldCode==null || oldCode.equals("null")){
+        if (oldCode == null || oldCode.equals("null")) {
             intCode = 0;
-        }else{
+        } else {
             intCode = Integer.parseInt(oldCode);
         }
 
@@ -475,7 +493,7 @@ public class VideoController {
         try {
             String downloadUrl = webHeaderJS.getDownloadUrl();
             String pageUrl = webHeaderJS.getPageUrl();
-            return addUrl(downloadUrl,pageUrl);
+            return addUrl(downloadUrl, pageUrl);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -486,16 +504,16 @@ public class VideoController {
     public Resposta rebuild(@PathVariable("code") String code) {
         try {
             File mp4File = videoFileService.getVideoFileByCode(code);
-            if(mp4File.isFile() && mp4File.exists()){
+            if (mp4File.isFile() && mp4File.exists()) {
                 File image = videoFileService.createPreviewImage(mp4File);
-                if(image.exists()){
+                if (image.exists()) {
                     String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
                             .path("/media/image/")
                             .path(code)
-                            .queryParam("time", new Date().getTime()/1000)
+                            .queryParam("time", new Date().getTime() / 1000)
                             .toUriString();
                     return new Resposta(imageUrl).success();
-                }else{
+                } else {
                     return new Resposta().failed("Erro ao atualizar");
                 }
             }
@@ -512,14 +530,14 @@ public class VideoController {
             Base64.Decoder decoder = Base64.getDecoder();
             String downloadUrl = new String(decoder.decode(body.get("downloadUrl")), StandardCharsets.UTF_8);
             String pageUrl = new String(decoder.decode(body.get("pageUrl")), StandardCharsets.UTF_8);
-            return addUrl(downloadUrl,pageUrl);
+            return addUrl(downloadUrl, pageUrl);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
         return new Resposta().failed("Erro ao baixar");
     }
 
-    private Resposta addUrl(String downloadUrl,String pageUrl) {
+    private Resposta addUrl(String downloadUrl, String pageUrl) {
         try {
             VideoModel videoModel = new VideoModel();
             videoModel.setCode(getNextCode());
@@ -532,7 +550,7 @@ public class VideoController {
             downloadQueue.setVideoUrl(downloadUrl);
             downloadQueue.setCode(videoModel.getCode());
             downloadQueueRepository.saveAndFlush(downloadQueue);
-            if(addToRealQueue){
+            if (addToRealQueue) {
                 videoDownloadService.addToQueue(downloadQueue);
             }
             return new Resposta().success();

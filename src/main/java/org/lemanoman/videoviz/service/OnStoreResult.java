@@ -10,6 +10,6 @@ public interface OnStoreResult {
     void onDownloadError(Exception ex);
     void onDownloadSuccess(DownloadQueue queue);
     void onPermissionSuccess(DownloadQueue queue);
-    void onReadyToFactoryImage(File mp4File, DownloadQueue queue);
+    void onReadyToFactoryImage(File basePath,File mp4File, DownloadQueue queue);
     void onFinished(DownloadQueue downloadQueue, File file1);
 }

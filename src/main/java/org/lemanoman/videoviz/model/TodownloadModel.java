@@ -6,7 +6,7 @@ import java.sql.Timestamp;
 import java.util.Objects;
 
 @Entity
-@Table(name = "todownload", schema = "advancedvideomanager")
+@Table(name = "todownload")
 public class TodownloadModel  implements Serializable {
     @Id
     @Column(name = "id")

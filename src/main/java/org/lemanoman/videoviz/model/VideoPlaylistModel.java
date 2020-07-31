@@ -5,7 +5,7 @@ import java.io.Serializable;
 import java.util.Date;
 
 @Entity
-@Table(name = "videoPlaylist", schema = "advancedvideomanager", catalog = "")
+@Table(name = "videoPlaylist")
 @IdClass(VideoPlaylistPK.class)
 public class VideoPlaylistModel implements Serializable {
     @Id

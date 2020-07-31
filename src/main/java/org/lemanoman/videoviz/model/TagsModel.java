@@ -5,7 +5,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 @Entity
-@Table(name = "tags", schema = "advancedvideomanager", catalog = "")
+@Table(name = "tags")
 public class TagsModel implements Serializable {
     private Integer idTag;
     private String tag;

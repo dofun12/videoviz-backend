@@ -5,7 +5,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 @Entity
-@Table(name = "location", schema = "advancedvideomanager")
+@Table(name = "location")
 public class LocationModel implements Serializable {
 
     @Id
