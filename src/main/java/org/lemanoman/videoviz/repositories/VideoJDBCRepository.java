@@ -34,11 +34,13 @@ public class VideoJDBCRepository extends DefaultJDBCRepository {
                         "                       vu.midiaUrl,\n" +
                         "                       v.*,\n" +
                         "                       v.title,\n" +
+                        "                       lo.context,\n" +
                         "                       v.code,\n" +
-                        "                       (select count(0) from advancedvideomanager.videoHistory where idVideo = v.idVideo) as timesWatched,\n" +
+                        "                       (select count(0) from videoHistory where idVideo = v.idVideo) as timesWatched,\n" +
                         "                       v.original_tags                            as originalTags\n" +
                         "                from video v\n" +
-                        "                         left join advancedvideomanager.videoUrls vu on v.idVideo = vu.idVideo\n" +
+                        "                         inner join location lo on v.idLocation = lo.idLocation\n" +
+                        "                         left join videoUrls vu on v.idVideo = vu.idVideo\n" +
                         "                where v.idVideo = ? \n", idVideo);
         return mapper.convertValue(map, ObjectNode.class);
     }
@@ -47,6 +49,7 @@ public class VideoJDBCRepository extends DefaultJDBCRepository {
 
         ObjectNode node =  getInfo(idVideo);
         VideoJS retorno = new VideoJS();
+        retorno.setContext(node.get("context").asText());
         retorno.setCode(node.get("code").asText());
         retorno.setVideoSize(node.get("video_size").asText());
         retorno.setTitle(node.get("title").asText());
@@ -301,8 +304,10 @@ public class VideoJDBCRepository extends DefaultJDBCRepository {
         StringBuilder builder = new StringBuilder("select\n" +
                 "       1 as totalWatched,\n" +
                 "        v.*\n" +
+                "        ,lo.context\n" +
                 "    from\n" +
                 "        video v\n" +
+                "        inner join location lo on lo.idLocation = v.idLocation\n" +
                 "  where\n" +
                 "    (v.isdeleted = 0 or v.isdeleted is null)" +
                 "    and v.isfileexist=1 " +

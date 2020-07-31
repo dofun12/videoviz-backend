@@ -4,7 +4,7 @@ import javax.persistence.*;
 import java.util.Objects;
 
 @Entity
-@Table(name = "videoMirrors", schema = "advancedvideomanager")
+@Table(name = "videoMirrors")
 public class VideoMirrorsModel {
     @Id
     @GeneratedValue

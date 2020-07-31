@@ -6,7 +6,7 @@ import java.sql.Timestamp;
 import java.util.Objects;
 
 @Entity
-@Table(name = "video", schema = "advancedvideomanager")
+@Table(name = "video")
 public class VideoModel implements Serializable {
     @Id
     @GeneratedValue(strategy=GenerationType.IDENTITY)
@@ -49,6 +49,9 @@ public class VideoModel implements Serializable {
     @Column(name = "isfileexist")
     private Integer isfileexist;
 
+    @Column(name = "idLocation")
+    private Integer idLocation;
+
     @Column(name = "invalid")
     private Integer invalid;
 
@@ -65,7 +68,13 @@ public class VideoModel implements Serializable {
     @JoinColumn(name = "idVideo")
     private VideoUrlsModel videoUrls;
 
+    public Integer getIdLocation() {
+        return idLocation;
+    }
 
+    public void setIdLocation(Integer idLocation) {
+        this.idLocation = idLocation;
+    }
 
     public Integer getIdVideo() {
         return idVideo;

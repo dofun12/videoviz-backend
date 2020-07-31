@@ -7,7 +7,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 @Entity
-@Table(name = "videoUrls", schema = "advancedvideomanager")
+@Table(name = "videoUrls")
 public class VideoUrlsModel  implements Serializable {
 
     @Id

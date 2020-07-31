@@ -1,6 +1,7 @@
 package org.lemanoman.videoviz.service;
 
 
+import org.lemanoman.videoviz.Constants;
 import org.lemanoman.videoviz.SysCommandsUtils;
 import org.lemanoman.videoviz.Utils;
 import org.lemanoman.videoviz.dto.StoreResult;
@@ -30,8 +31,8 @@ public class VideoFileService {
     @Value("${custom.uploadlocation}")
     private String uploadlocation;
 
-    public Resource getImagem(String filename){
-        Path path = Paths.get(uploadlocation + "/"+filename);
+    public Resource getImagem(String filename) {
+        Path path = Paths.get(uploadlocation + "/" + filename);
         Resource resource = null;
         try {
             resource = new UrlResource(path.toUri());
@@ -42,35 +43,39 @@ public class VideoFileService {
         return null;
     }
 
-    public File getImageFileByCode(String code){
-        return new File(imgLocation+File.separator+code+".mp4");
+    public File getImageFileByCode(String code) {
+        return new File(imgLocation + File.separator + code + ".mp4");
     }
 
-    public File getVideoFileByCode(String code){
-        return new File(uploadlocation+File.separator+code+".mp4");
+    public File getVideoFileByCode(String code) {
+        return new File(uploadlocation + File.separator + code + ".mp4");
     }
 
     public File createPreviewImage(File mp4File) throws IOException, InterruptedException {
+        return createPreviewImage(imgLocation, mp4File);
+    }
+
+    public File createPreviewImage(String customImgLocation, File mp4File) throws IOException, InterruptedException {
         System.out.println("Verificando ffmpeg ");
         //File ffmpeg = new File("/usr/bin/ffmpeg");
         File ffmpeg = new File(ffmpegLocation);
-        if(ffmpeg.exists()){
-            File imgFolderFile = new File(imgLocation);
-            if(!imgFolderFile.exists()){
-                if(!imgFolderFile.mkdirs()){
-                    throw new IOException("Erro ao criar diretorio: "+imgLocation);
+        if (ffmpeg.exists()) {
+            File imgFolderFile = new File(Constants.getBaseImageLocation(customImgLocation));
+            if (!imgFolderFile.exists()) {
+                if (!imgFolderFile.mkdirs()) {
+                    throw new IOException("Erro ao criar diretorio: " + Constants.getBaseImageLocation(customImgLocation));
                 }
             }
             //String imagePath = "/var/www/html/v1/ltimg/"+mp4File.getName().replace(".mp4",".png");
-            String imagePath = imgLocation+File.separator+mp4File.getName().replace(".mp4",".png");
-            System.out.println("Verificando se existe a imagem: "+imagePath);
+            String imagePath = Constants.getImageFile(customImgLocation, mp4File.getName().replace(".mp4", ".png"));
+            System.out.println("Verificando se existe a imagem: " + imagePath);
             File imageFile = new File(imagePath);
-            if(imageFile.exists()){
+            if (imageFile.exists()) {
                 imageFile.delete();
             }
             if (mp4File.exists() && !imageFile.exists()) {
-                String command = ffmpegLocation+" -y -i  " + mp4File.getAbsolutePath() + " -ss 10 -vframes 1 -vcodec png -filter:v scale=\"200:-1\" " + imageFile.getAbsolutePath();/// + " &> /dev/null";
-                SysCommandsUtils.runCommandBash(command,true);
+                String command = ffmpegLocation + " -y -i  " + mp4File.getAbsolutePath() + " -ss 10 -vframes 1 -vcodec png -filter:v scale=\"200:-1\" " + imageFile.getAbsolutePath();/// + " &> /dev/null";
+                SysCommandsUtils.runCommandBash(command, true);
                 System.out.println("Running: " + command);
                 System.out.println("Alterando permissões: " + command);
                 Set<PosixFilePermission> perms = new HashSet<>();
@@ -80,38 +85,43 @@ public class VideoFileService {
                 perms.add(PosixFilePermission.GROUP_READ);
                 try {
                     Files.setPosixFilePermissions(imageFile.toPath(), perms);
-                }catch (UnsupportedOperationException unsupportedOperationException){
+                } catch (UnsupportedOperationException unsupportedOperationException) {
                     System.out.println("Mudar permissao nao suportada");
                 }
                 return imageFile;
-            }else if(mp4File.exists() && imageFile.exists()){
-                return  imageFile;
+            } else if (mp4File.exists() && imageFile.exists()) {
+                return imageFile;
             }
 
         }
         return null;
     }
 
-    public StoreResult storeVideo(String filename, InputStream inputStream){
+    public StoreResult storeVideo(String filename, InputStream inputStream) {
+        return storeVideo(uploadlocation, filename, inputStream);
+    }
+
+
+    public StoreResult storeVideo(String customLocation, String filename, InputStream inputStream) {
         StoreResult result = new StoreResult();
-        System.out.println("Salvando filename: "+ filename+" ...");
-        File dir = new File(uploadlocation);
-        if(!dir.exists()){
-            dir = new File(uploadlocation);
-            if(!dir.exists()){
+        System.out.println("Salvando filename: " + filename + " ...");
+        File dir = new File(customLocation);
+        if (!dir.exists()) {
+            dir = new File(customLocation);
+            if (!dir.exists()) {
                 dir.mkdirs();
             }
         }
 
-        File file1 = new File(dir.getAbsolutePath()+"/"+filename);
-        System.out.println("Salvando filename at: "+ dir.getAbsolutePath()+"/"+filename+" ...");
+        File file1 = new File(Constants.getVideoFile(customLocation, filename));
+        System.out.println("Salvando filename at: " + Constants.getVideoFile(customLocation, filename) + " ...");
         try {
             BufferedInputStream bis = new BufferedInputStream(inputStream);
             FileOutputStream fileOutputStream = new FileOutputStream(file1);
             BufferedOutputStream bos = new BufferedOutputStream(fileOutputStream);
 
             byte[] buffer = new byte[1048576];
-            System.out.println("Tentando com buff de "+buffer.length);
+            System.out.println("Tentando com buff de " + buffer.length);
             int count;
             while ((count = bis.read(buffer)) != -1) {
                 bos.write(buffer, 0, count);
@@ -132,12 +142,12 @@ public class VideoFileService {
             perms.add(PosixFilePermission.GROUP_READ);
             try {
                 Files.setPosixFilePermissions(file1.toPath(), perms);
-            }catch (UnsupportedOperationException ex){
+            } catch (UnsupportedOperationException ex) {
                 System.out.println("Nao da para mudar as permissoes, chora ae");
             }
             try {
-                createPreviewImage(file1);
-            }catch (Exception ex){
+                createPreviewImage(customLocation, file1);
+            } catch (Exception ex) {
                 ex.printStackTrace();
             }
             result.setVideoAdded(file1);
@@ -147,7 +157,7 @@ public class VideoFileService {
             e.printStackTrace();
             return null;
         }
-
     }
+
 
 }

@@ -25,7 +25,16 @@ public class VideoJS implements Serializable {
     private Integer invalid;
     private Timestamp lastwatched;
     private Double duration;
+    private String context;
     private Integer totalWatched;
+
+    public String getContext() {
+        return context;
+    }
+
+    public void setContext(String context) {
+        this.context = context;
+    }
 
     public Integer getIdVideo() {
         return idVideo;

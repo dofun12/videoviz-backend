@@ -18,25 +18,53 @@ import java.util.Set;
 public class StoreVideoTask implements Runnable {
     private DownloadQueue downloadQueue;
     private OnStoreResult storeResult;
+    private String baseDir;
 
-    public StoreVideoTask(DownloadQueue downloadQueue,OnStoreResult onStoreResult){
+    public StoreVideoTask(String baseDir, DownloadQueue downloadQueue, OnStoreResult onStoreResult) {
         this.storeResult = onStoreResult;
         this.downloadQueue = downloadQueue;
+        this.baseDir = baseDir;
     }
 
+    private boolean verifyLocation(String... customLocations) {
+        boolean valid = true;
+        for (String customLocation : customLocations) {
+            try {
+                File dir = new File(customLocation);
+                if (!dir.exists()) {
+                    if (dir.mkdirs()) {
+                        valid = (valid && true);
+                    } else {
+                        throw new Exception("Cant create dirs");
+                    }
+                } else {
+                    valid = (valid && true);
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                valid = (valid && false);
+            }
+        }
+        return valid;
+    }
 
     @Override
     public void run() {
-        if(storeResult!=null)storeResult.onServiceStart(downloadQueue);
-        File dir = new File(Constants.MP4_BASE_PATH);
-        if(!dir.exists()){
+        if (!verifyLocation(baseDir,Constants.getBaseMP4Location(baseDir),Constants.getBaseImageLocation(baseDir))){
+            if (storeResult != null)
+                storeResult.onDownloadError(new Exception("Erro ao criar os diretorios: " + baseDir));
+            return;
+        }
+        if (storeResult != null) storeResult.onServiceStart(downloadQueue);
+        File dir = new File(baseDir);
+        if (!dir.exists()) {
             dir = new File("E:\\\\data");
-            if(!dir.exists()){
+            if (!dir.exists()) {
                 dir.mkdirs();
             }
         }
 
-        String filePath = dir.getAbsolutePath()+File.separator+downloadQueue.getCode()+".mp4";
+        String filePath = Constants.getVideoFile(baseDir, downloadQueue.getCode() + ".mp4");
         RequestConfig requestConfig = RequestConfig.custom()
                 .setConnectionRequestTimeout(20000)
                 .setConnectTimeout(20000)
@@ -55,7 +83,7 @@ public class StoreVideoTask implements Runnable {
                 long length = entity.getContentLength();
                 InputStream inputStream = entity.getContent();
 
-                if(storeResult!=null)storeResult.onDownloadStart(downloadQueue,length);
+                if (storeResult != null) storeResult.onDownloadStart(downloadQueue, length);
                 BufferedInputStream bis = new BufferedInputStream(inputStream);
                 FileOutputStream fileOutputStream = new FileOutputStream(filePath);
                 BufferedOutputStream bos = new BufferedOutputStream(fileOutputStream);
@@ -75,7 +103,7 @@ public class StoreVideoTask implements Runnable {
                 bos.close();
                 fileOutputStream.close();
                 File file1 = new File(filePath);
-                if(storeResult!=null)storeResult.onDownloadSuccess(downloadQueue);
+                if (storeResult != null) storeResult.onDownloadSuccess(downloadQueue);
                 try {
                     Set<PosixFilePermission> perms = new HashSet<>();
                     perms.add(PosixFilePermission.OTHERS_READ);
@@ -83,18 +111,19 @@ public class StoreVideoTask implements Runnable {
                     perms.add(PosixFilePermission.GROUP_WRITE);
                     perms.add(PosixFilePermission.GROUP_READ);
                     Files.setPosixFilePermissions(file1.toPath(), perms);
-                    if(storeResult!=null)storeResult.onPermissionSuccess(downloadQueue);
-                }catch (Exception ex){
+                    if (storeResult != null) storeResult.onPermissionSuccess(downloadQueue);
+                } catch (Exception ex) {
                     ex.printStackTrace();
                 }
-                if(storeResult!=null)storeResult.onReadyToFactoryImage(file1,downloadQueue);
-                if(storeResult!=null)storeResult.onFinished(downloadQueue,file1);
-            }else{
-                if(storeResult!=null)storeResult.onDownloadError(new Exception("Status diferente de 200: "+httpResponse.getStatusLine().getReasonPhrase()+" - "+httpResponse.getStatusLine().getStatusCode()));
+                if (storeResult != null) storeResult.onReadyToFactoryImage(dir, file1, downloadQueue);
+                if (storeResult != null) storeResult.onFinished(downloadQueue, file1);
+            } else {
+                if (storeResult != null)
+                    storeResult.onDownloadError(new Exception("Status diferente de 200: " + httpResponse.getStatusLine().getReasonPhrase() + " - " + httpResponse.getStatusLine().getStatusCode()));
             }
         } catch (Exception e) {
             e.printStackTrace();
-            if(storeResult!=null)storeResult.onDownloadError(e);
+            if (storeResult != null) storeResult.onDownloadError(e);
             new File(filePath).delete();
             return;
         } finally {
@@ -102,7 +131,7 @@ public class StoreVideoTask implements Runnable {
                 httpclient.close();
             } catch (IOException e) {
                 e.printStackTrace();
-                if(storeResult!=null) storeResult.onDownloadError(new Exception("Erro ao fechar o http",e));
+                if (storeResult != null) storeResult.onDownloadError(new Exception("Erro ao fechar o http", e));
                 return;
             }
         }

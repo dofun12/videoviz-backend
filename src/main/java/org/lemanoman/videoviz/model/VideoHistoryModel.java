@@ -6,7 +6,7 @@ import java.sql.Timestamp;
 import java.util.Objects;
 
 @Entity
-@Table(name = "videoHistory", schema = "advancedvideomanager", catalog = "")
+@Table(name = "videoHistory")
 public class VideoHistoryModel  implements Serializable {
     private int id;
     private Integer idVideo;

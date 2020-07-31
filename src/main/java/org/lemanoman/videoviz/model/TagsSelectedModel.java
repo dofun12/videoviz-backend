@@ -5,7 +5,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 @Entity
-@Table(name = "tags", schema = "advancedvideomanager", catalog = "")
+@Table(name = "tags")
 public class TagsSelectedModel implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

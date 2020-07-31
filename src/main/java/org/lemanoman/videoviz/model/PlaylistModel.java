@@ -4,7 +4,7 @@ import javax.persistence.*;
 import java.io.Serializable;
 
 @Entity
-@Table(name = "playlist", schema = "advancedvideomanager", catalog = "")
+@Table(name = "playlist")
 public class PlaylistModel implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

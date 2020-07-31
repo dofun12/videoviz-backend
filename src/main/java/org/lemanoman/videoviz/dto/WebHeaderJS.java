@@ -3,6 +3,15 @@ package org.lemanoman.videoviz.dto;
 public class WebHeaderJS {
     private String pageUrl;
     private String downloadUrl;
+    private Integer idLocation;
+
+    public Integer getIdLocation() {
+        return idLocation;
+    }
+
+    public void setIdLocation(Integer idLocation) {
+        this.idLocation = idLocation;
+    }
 
     public String getPageUrl() {
         return pageUrl;

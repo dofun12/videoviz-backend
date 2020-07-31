@@ -5,7 +5,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 @Entity
-@Table(name = "images", schema = "advancedvideomanager")
+@Table(name = "images")
 public class ImagesModel implements Serializable {
 
     @Id

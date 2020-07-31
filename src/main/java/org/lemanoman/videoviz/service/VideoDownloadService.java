@@ -7,12 +7,10 @@ import org.lemanoman.videoviz.dto.PageNotFoundException;
 import org.lemanoman.videoviz.dto.ScrapResult;
 import org.lemanoman.videoviz.dto.VideoNotFoundException;
 import org.lemanoman.videoviz.model.DownloadQueue;
+import org.lemanoman.videoviz.model.LocationModel;
 import org.lemanoman.videoviz.model.VideoModel;
 import org.lemanoman.videoviz.model.VideoUrlsModel;
-import org.lemanoman.videoviz.repositories.DownloadQueueRepository;
-import org.lemanoman.videoviz.repositories.VideoJDBCRepository;
-import org.lemanoman.videoviz.repositories.VideoRepository;
-import org.lemanoman.videoviz.repositories.VideoUrlsRepository;
+import org.lemanoman.videoviz.repositories.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +33,9 @@ public class VideoDownloadService {
     private VideoRepository videoRepository;
 
     @Autowired
+    private LocationRepository locationRepository;
+
+    @Autowired
     private VideoFileService videoFileService;
 
     @Autowired
@@ -49,9 +50,14 @@ public class VideoDownloadService {
     private static final Logger log = LoggerFactory.getLogger(VideoDownloadService.class);
 
     public void addToQueue(DownloadQueue queue) {
+
+
         log.info("Tentando adicionar... " + queue.getId());
-        if (!fila.contains(queue.getId())) {
-            StoreVideoTask task = new StoreVideoTask(queue, new OnStoreResult() {
+        Optional<LocationModel> olm = locationRepository.findById(queue.getIdLocation());
+
+        if (olm.isPresent() && !fila.contains(queue.getId())) {
+
+            StoreVideoTask task = new StoreVideoTask(olm.get().getPath(),queue, new OnStoreResult() {
                 @Override
                 public void onServiceStart(DownloadQueue queue) {
                     log.info("Iniciando Servico..." + queue.getId());
@@ -99,9 +105,9 @@ public class VideoDownloadService {
                 }
 
                 @Override
-                public void onReadyToFactoryImage(File mp4File, DownloadQueue queue) {
+                public void onReadyToFactoryImage(File basePath,File mp4File, DownloadQueue queue) {
                     try {
-                        videoFileService.createPreviewImage(mp4File);
+                        videoFileService.createPreviewImage(basePath.getAbsolutePath(),mp4File);
                         DownloadQueue tmp = downloadQueueRepository.findById(queue.getId()).get();
                         tmp.setProgress(80);
                         tmp.setSituacao("Imagem OK");

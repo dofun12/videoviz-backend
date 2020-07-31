@@ -58,6 +58,7 @@ public class DownloadQueueController {
         try {
             DownloadQueue tmp = downloadQueueRepository.findById(id).get();
             tmp.setInProgress(dq.getInProgress());
+            tmp.setIdLocation(dq.getIdLocation());
             tmp.setFinished(dq.getFinished());
             tmp.setFailed(dq.getFailed());
             tmp.setVideoUrl(dq.getVideoUrl());
