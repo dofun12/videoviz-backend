@@ -62,8 +62,8 @@ public class UploadController {
         }
     }
 
-    @PostMapping("/upload")
-    public Resposta upload(
+    @PostMapping("/sendFile")
+    public Resposta sendFile(
             @RequestParam("idLocation") Integer idLocation,
             @RequestParam("file") MultipartFile[] files
     ) {
