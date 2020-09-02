@@ -234,6 +234,7 @@ public class UploadController {
                 return new Resposta().failed("No location found");
             }
 
+            idLocation = bestLocation.getIdLocation();
             String code = getNextCode();
             storeResult = videoFileService.storeVideo(bestLocation.getPath(), code + ".mp4", file.getInputStream());
 
