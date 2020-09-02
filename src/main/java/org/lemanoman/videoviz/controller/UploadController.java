@@ -256,6 +256,7 @@ public class UploadController {
                     } else {
                         videoModel.setTitle("Desconhecido");
                     }
+                    videoModel.setIdLocation(idLocation);
                     videoModel.setInvalid(0);
                     videoModel.setIsdeleted(0);
                     videoModel.setDateAdded(new Timestamp(new Date().getTime()));
