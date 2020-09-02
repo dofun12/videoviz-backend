@@ -40,6 +40,9 @@ public class UploadController {
     private VideoJDBCRepository jdbcRepository;
 
     @Autowired
+    private VideoUrlsRepository videoUrlsRepository;
+
+    @Autowired
     private VideoFileService videoFileService;
 
     @Autowired
@@ -195,6 +198,78 @@ public class UploadController {
                 e.printStackTrace();
                 throw new Exception("Erro ao fechar o http", e);
             }
+        }
+    }
+
+    @PostMapping("/salvar")
+    public Resposta handleFileUpload(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("url") String url
+    ) {
+        String filename = file.getOriginalFilename();
+        StoreResult storeResult = null;
+        try {
+
+            if (filename != null) {
+                ScrapResult result = null;
+                try {
+                    result = Scrapper.getScrapResult(url);
+                } catch (VideoNotFoundException | PageNotFoundException | IOException e) {
+                    e.printStackTrace();
+                }
+                String code = getNextCode();
+                storeResult = videoFileService.storeVideo(code + ".mp4", file.getInputStream());
+
+                if (storeResult != null) {
+                    if (jdbcRepository.getByMD5(storeResult.getMd5sum()).isEmpty()) {
+                        VideoModel videoModel = new VideoModel();
+                        videoModel.setCode(code);
+                        if (result != null) {
+                            videoModel.setTitle(result.getTitle());
+                            String tags = "";
+                            if (result.getTags() != null && !result.getTags().isEmpty()) {
+                                String tagsStr = "";
+                                for (String tag : result.getTags()) {
+                                    tagsStr = tagsStr + "," + tag;
+                                }
+                                tags = (tagsStr.substring(1));
+                            }
+                            videoModel.setOriginalTags(tags);
+                        } else {
+                            videoModel.setTitle("Desconhecido");
+                        }
+                        videoModel.setInvalid(0);
+                        videoModel.setIsdeleted(0);
+                        videoModel.setDateAdded(new Timestamp(new Date().getTime()));
+                        videoModel.setIsfileexist(1);
+                        videoModel.setMd5Sum(storeResult.getMd5sum());
+                        videoModel.setVideoSize(String.valueOf(file.getSize()));
+                        videoRepository.saveAndFlush(videoModel);
+
+                        VideoUrlsModel videoUrlsModel = new VideoUrlsModel();
+                        videoUrlsModel.setIdVideo(videoModel.getIdVideo());
+                        videoUrlsModel.setPageUrl(url);
+                        videoUrlsRepository.saveAndFlush(videoUrlsModel);
+                        ObjectMapper mapper = new ObjectMapper();
+
+                        ObjectNode node = mapper.convertValue(videoModel, ObjectNode.class);
+                        node.put("filepath", storeResult.getVideoAdded().getAbsolutePath());
+                        return new Resposta(node).success();
+                    } else {
+                        throw new Exception("Video já existe");
+                    }
+                } else {
+                    throw new Exception("Erro ao salvar o arquivo");
+                }
+            } else {
+                throw new Exception("Filename invalido");
+            }
+        } catch (Exception e) {
+            if (storeResult != null && storeResult.getVideoAdded() != null) {
+                storeResult.getVideoAdded().delete();
+            }
+            e.printStackTrace();
+            return new Resposta().failed(e);
         }
     }
 
