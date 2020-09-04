@@ -113,6 +113,11 @@ public class VideoFileService {
             }
         }
 
+        File subDir = new File(Constants.getBaseMP4Location(customLocation));
+        if (!subDir.exists()) {
+            subDir.mkdirs();
+        }
+
         File file1 = new File(Constants.getVideoFile(customLocation, filename));
         System.out.println("Salvando filename at: " + Constants.getVideoFile(customLocation, filename) + " ...");
         try {

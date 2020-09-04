@@ -40,6 +40,9 @@ public class UploadController {
     private VideoJDBCRepository jdbcRepository;
 
     @Autowired
+    private VideoUrlsRepository videoUrlsRepository;
+
+    @Autowired
     private VideoFileService videoFileService;
 
     @Autowired
@@ -62,8 +65,8 @@ public class UploadController {
         }
     }
 
-    @PostMapping("/upload")
-    public Resposta upload(
+    @PostMapping("/sendFile")
+    public Resposta sendFile(
             @RequestParam("idLocation") Integer idLocation,
             @RequestParam("file") MultipartFile[] files
     ) {
@@ -111,7 +114,7 @@ public class UploadController {
                     }
                 }
                 return new Resposta(videoJSList).success();
-            }else{
+            } else {
                 return new Resposta().failed("Localizacao Invalida");
             }
 
@@ -198,13 +201,103 @@ public class UploadController {
         }
     }
 
+    @PostMapping("/salvar")
+    public Resposta handleFileUpload(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("url") String url
+    ) {
+        String filename = file.getOriginalFilename();
+        StoreResult storeResult = null;
+        Integer idLocation = null;
+        ScrapResult result = null;
+        try {
+
+            try {
+                result = Scrapper.getScrapResult(url);
+            } catch (VideoNotFoundException | PageNotFoundException | IOException e) {
+                e.printStackTrace();
+            }
+
+            List<LocationModel> list = locationRepository.findAll();
+            LocationModel bestLocation = null;
+            long bestSize = 0l;
+            for (LocationModel lm : list) {
+                File path = new File(lm.getPath());
+                long maxSize = path.getUsableSpace();
+                if (maxSize > bestSize) {
+                    bestLocation = lm;
+                    bestSize = maxSize;
+                }
+            }
+
+            if (bestLocation == null) {
+                return new Resposta().failed("No location found");
+            }
+
+            idLocation = bestLocation.getIdLocation();
+            String code = getNextCode();
+            storeResult = videoFileService.storeVideo(bestLocation.getPath(), code + ".mp4", file.getInputStream());
+
+            if (storeResult != null) {
+
+                if (jdbcRepository.getByMD5(storeResult.getMd5sum()).isEmpty()) {
+                    VideoModel videoModel = new VideoModel();
+                    videoModel.setCode(code);
+                    if (result != null) {
+                        videoModel.setTitle(result.getTitle());
+                        String tags = "";
+                        if (result.getTags() != null && !result.getTags().isEmpty()) {
+                            String tagsStr = "";
+                            for (String tag : result.getTags()) {
+                                tagsStr = tagsStr + "," + tag;
+                            }
+                            tags = (tagsStr.substring(1));
+                        }
+                        videoModel.setOriginalTags(tags);
+                    } else {
+                        videoModel.setTitle("Desconhecido");
+                    }
+                    videoModel.setIdLocation(idLocation);
+                    videoModel.setInvalid(0);
+                    videoModel.setIsdeleted(0);
+                    videoModel.setDateAdded(new Timestamp(new Date().getTime()));
+                    videoModel.setIsfileexist(1);
+                    videoModel.setMd5Sum(storeResult.getMd5sum());
+                    videoModel.setVideoSize(String.valueOf(file.getSize()));
+                    videoRepository.saveAndFlush(videoModel);
+
+                    VideoUrlsModel videoUrlsModel = new VideoUrlsModel();
+                    videoUrlsModel.setIdVideo(videoModel.getIdVideo());
+                    videoUrlsModel.setPageUrl(url);
+                    videoUrlsRepository.saveAndFlush(videoUrlsModel);
+                    ObjectMapper mapper = new ObjectMapper();
+
+                    ObjectNode node = mapper.convertValue(videoModel, ObjectNode.class);
+                    node.put("filepath", storeResult.getVideoAdded().getAbsolutePath());
+                    return new Resposta(node).success();
+                } else {
+                    throw new Exception("Video já existe");
+                }
+            } else {
+                throw new Exception("Erro ao salvar o arquivo");
+            }
+        } catch (Exception e) {
+            if (storeResult != null && storeResult.getVideoAdded() != null) {
+                storeResult.getVideoAdded().delete();
+            }
+            e.printStackTrace();
+            return new Resposta().failed(e);
+        }
+
+    }
+
     @PostMapping("/addURLv2")
     public Resposta addUrlJson(@RequestBody WebHeaderJS webHeaderJS) {
         try {
             String downloadUrl = webHeaderJS.getDownloadUrl();
             String pageUrl = webHeaderJS.getPageUrl();
             Integer idLocation = webHeaderJS.getIdLocation();
-            return addUrl(idLocation,downloadUrl, pageUrl);
+            return addUrl(idLocation, downloadUrl, pageUrl);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -217,23 +310,23 @@ public class UploadController {
             Base64.Decoder decoder = Base64.getDecoder();
             String downloadUrl = new String(decoder.decode(body.get("downloadUrl")), StandardCharsets.UTF_8);
             String pageUrl = new String(decoder.decode(body.get("pageUrl")), StandardCharsets.UTF_8);
-            return addUrl(null,downloadUrl, pageUrl);
+            return addUrl(null, downloadUrl, pageUrl);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
         return new Resposta().failed("Erro ao baixar");
     }
 
-    private Resposta addUrl(Integer idLocation,String downloadUrl, String pageUrl) {
+    private Resposta addUrl(Integer idLocation, String downloadUrl, String pageUrl) {
         try {
-            if(idLocation==null){
+            if (idLocation == null) {
                 List<LocationModel> list = locationRepository.findAll();
                 LocationModel bestLocation = null;
                 long bestSize = 0l;
-                for(LocationModel lm:list){
+                for (LocationModel lm : list) {
                     File path = new File(lm.getPath());
                     long maxSize = path.getUsableSpace();
-                    if(maxSize>bestSize){
+                    if (maxSize > bestSize) {
                         bestLocation = lm;
                         bestSize = maxSize;
                     }

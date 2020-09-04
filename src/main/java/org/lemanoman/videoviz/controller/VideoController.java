@@ -94,17 +94,12 @@ public class VideoController {
         }
     }
 
-    @PostMapping("/novo")
-    public Resposta novo(@RequestBody VideoJS videoJS) {
+    @PutMapping("/")
+    public Resposta update(@RequestBody VideoJS videoJS) {
         try {
             VideoModel videoModel = null;
             if (videoJS.getIdVideo() == null) {
                 videoModel = new VideoModel();
-                videoModel.setCode(getNextCode());
-                videoModel.setInvalid(0);
-                videoModel.setIsdeleted(0);
-                videoModel.setDateAdded(new Timestamp(new Date().getTime()));
-                videoModel.setIsfileexist(1);
             } else {
                 videoModel = videoRepository.findById(videoJS.getIdVideo()).orElse(new VideoModel());
             }
@@ -112,7 +107,9 @@ public class VideoController {
             videoModel.setTitle(videoJS.getTitle());
             videoRepository.saveAndFlush(videoModel);
 
-            VideoUrlsModel videoUrlsModel = new VideoUrlsModel();
+            Optional<VideoUrlsModel> getVM = videoUrlsRepository.findById(videoModel.getIdVideo());
+
+            VideoUrlsModel videoUrlsModel = getVM.orElse(new VideoUrlsModel());
             videoUrlsModel.setIdVideo(videoModel.getIdVideo());
             videoUrlsModel.setPageUrl(videoJS.getPageUrl());
             videoUrlsModel.setMidiaUrl(videoJS.getMediaUrl());
