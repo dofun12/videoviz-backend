@@ -281,4 +281,4 @@ CREATE TABLE `videoUrls` (
 -- Dump completed on 2020-08-29 15:51:12
 
 insert into usuario (login, password, role) values ('admin','$2a$10$a8MgCZTN1Qjcyf1NBnj1DOzaDisSTG4wIotrbJXaEmbXidXA8yK/q','admin');
-insert into location(context, path) values ('teste', 'E:\\data\\teste');
+insert into location(context, path) values ('mydata', '/mydata');
