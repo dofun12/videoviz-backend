@@ -1,3 +1,5 @@
+#Script usado no Jenkins para criar o container
+# || true usado para ignorar problemas e continuar
 docker stop videoviz || true
 docker rm videoviz || true
 docker build -t videoviz/videoviz:$BUILD_ID . -f docker/java/Dockerfile || true
