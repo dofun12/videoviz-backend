@@ -34,4 +34,18 @@ public class MD5FillerService {
             }
         }
     }
+
+    public void verifyIfExists(){
+        List<Map<String,Object>> lista = videoJDBCRepository.getListMD5();
+        for(Map<String,Object> map: lista){
+            File mp4File = new File(Constants.MP4_BASE_PATH+ File.separator+map.get("code")+".mp4");
+            if(mp4File.exists()){
+                VideoModel videoModel = videoRepository.findById((Integer) map.get("idVideo")).get();
+                videoModel.setMd5Sum(Utils.getMD5SUM(mp4File));
+                videoModel.setIsfileexist(1);
+                videoModel.setVideoSize(String.valueOf(mp4File.length()));
+                videoRepository.save(videoModel);
+            }
+        }
+    }
 }
