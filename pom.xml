@@ -13,9 +13,22 @@
     </properties>
     <packaging>war</packaging>
 
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>videoviz</groupId>
+    <artifactId>videoviz-backend</artifactId>
+    <version>0.0.2-SNAPSHOT</version>
+
     <build>
         <finalName>ROOT</finalName>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>3.0.0-M1</version>
+                <configuration>
+                    <tagNameFormat>v@{project.version}</tagNameFormat>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -41,10 +54,7 @@
         </plugins>
     </build>
 
-    <modelVersion>4.0.0</modelVersion>
-    <groupId>videoviz</groupId>
-    <artifactId>videoviz-backend</artifactId>
-    <version>0.0.2</version>
+
 
     <dependencies>
         <dependency>
