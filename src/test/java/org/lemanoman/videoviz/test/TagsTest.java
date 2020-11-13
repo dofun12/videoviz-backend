@@ -2,6 +2,7 @@ package org.lemanoman.videoviz.test;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.lemanoman.videoviz.repositories.TagJDBCRepository;
@@ -11,12 +12,21 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.utility.MountableFile;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class TagsTest {
     @LocalServerPort
     private int port;
+
+    @ClassRule
+    public static GenericContainer getContainerMysql(){
+        return ContainerUtils.MYSQL_CONTAINER;
+    }
+
+
 
     @Autowired
     private TagRepository tagRepository;

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.lemanoman.videoviz.controller.VideoController;
@@ -14,6 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.testcontainers.containers.GenericContainer;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -32,6 +34,11 @@ public class VideoListTest {
 
     @Autowired
     private TestRestTemplate restTemplate;
+
+    @ClassRule
+    public static GenericContainer getContainerMysql(){
+        return ContainerUtils.MYSQL_CONTAINER;
+    }
 
     @Test
     public void listarTodos() throws Exception {
