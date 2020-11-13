@@ -9,11 +9,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @EnableScheduling
 @EnableCaching
-public class Application  extends SpringBootServletInitializer {
+public class JarApplication {
 
 
     public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
+        SpringApplication.run(JarApplication.class, args);
     }
 
 }

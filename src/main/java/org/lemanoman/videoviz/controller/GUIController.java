@@ -48,8 +48,16 @@ public class GUIController {
                         || requestUrl.endsWith(".ico")
         ) {
             String[] paths = requestUrl.split("/");
+
             String filename = paths[paths.length - 1];
-            File requestedFile = new File(guiLocation + File.separator + filename);
+            StringBuilder newPath = new StringBuilder(guiLocation);
+            for(int i=4;i<paths.length;i++){
+                newPath.append(File.separator);
+                if(i==(paths.length-1))break;
+                newPath.append(paths[i]);
+            }
+            newPath.append(filename);
+            File requestedFile = new File(newPath.toString());
             if (requestedFile.exists()) {
                 FileInputStream fis = new FileInputStream(requestedFile);
                 return ResponseEntity.ok(new InputStreamResource(fis));
