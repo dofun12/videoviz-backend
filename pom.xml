@@ -17,7 +17,9 @@
     <groupId>videoviz</groupId>
     <artifactId>videoviz-backend</artifactId>
     <version>0.0.2-SNAPSHOT</version>
-
+    <scm>
+        <developerConnection>scm:git:git@github.com:dofun12/videoviz-backend.git</developerConnection>
+    </scm>
     <build>
         <finalName>videoviz-backend</finalName>
         <plugins>
