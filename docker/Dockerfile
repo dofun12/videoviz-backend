@@ -1,4 +1,18 @@
-# Adicionando os scripts SQL para serem executados na criação do banco
-FROM mysql:5.7.12
-COPY ./db/ /docker-entrypoint-initdb.d/
-#RUN mysql -u ${MYSQL_USER} -p${MYSQL_ROOT_PASSWORD} -D lba < /docker-entrypoint-initdb.d/database.sql
+FROM openjdk:8-jdk-alpine
+RUN apk add --no-cache bash
+RUN apk add --no-cache ffmpeg
+ARG JAR_FILE=target/*.jar
+
+RUN mkdir -p /out
+COPY ${JAR_FILE} /out/app.jar
+RUN (cd /out ; jar -xf app.jar)
+RUN mkdir /app
+RUN ls /out/
+RUN cp -r /out/BOOT-INF/lib /app/lib
+RUN cp -r /out/META-INF /app/META-INF
+RUN cp -r /out/BOOT-INF/classes/* /app
+
+RUN ls -R /app
+
+
+ENTRYPOINT ["java","cat -cp","/app:/app/lib/*","org.lemanoman.videoviz.JarApplication"]
