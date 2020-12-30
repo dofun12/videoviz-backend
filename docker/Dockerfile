@@ -15,4 +15,4 @@ RUN cp -r /out/BOOT-INF/classes/* /app
 RUN ls -R /app
 
 
-ENTRYPOINT ["java","cat -cp","/app:/app/lib/*","org.lemanoman.videoviz.JarApplication"]
+ENTRYPOINT ["java","-cp","/app:/app/lib/*","org.lemanoman.videoviz.JarApplication"]
