@@ -17,5 +17,5 @@ ENV MAVEN_CONFIG "/.m2"
 
 RUN mkdir /app
 WORKDIR /app
-ENTRYPOINT ["tail", "-f", "/dev/null"]
-#ENTRYPOINT ["./build.sh"]
+#ENTRYPOINT ["tail", "-f", "/dev/null"]
+ENTRYPOINT ["./build.sh"]
