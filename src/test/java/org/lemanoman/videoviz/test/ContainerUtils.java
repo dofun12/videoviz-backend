@@ -7,7 +7,7 @@ public class ContainerUtils {
 
     public static GenericContainer MYSQL_CONTAINER
             = new GenericContainer("mysql:5.7.12")
-            .withCopyFileToContainer(MountableFile.forHostPath("E:\\projetos\\videoviz\\docker\\db\\CreateDatabase.sql"),"/docker-entrypoint-initdb.d/")
+            .withCopyFileToContainer(MountableFile.forHostPath("E:\\projetos\\videoviz\\docker\\db\\Cvideoviz_2021-01-07-04-14.sql"),"/docker-entrypoint-initdb.d/")
             .withExposedPorts(3306)
             .withEnv("MYSQL_ROOT_PASSWORD","videoviz")
             .withEnv("MYSQL_DATABASE","videoviz")

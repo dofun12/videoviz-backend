@@ -1,8 +1,12 @@
 package org.lemanoman.videoviz;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 public class Utils {
     public static String getMD5SUM(File f) {
@@ -33,5 +37,20 @@ public class Utils {
         }
         return null;
 
+    }
+
+    public static String getMD5SumJava(File file){
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+            return null;
+        }
+        try (InputStream is = Files.newInputStream(Paths.get(file.getAbsolutePath()))){
+            return org.apache.commons.codec.digest.DigestUtils.md5Hex(is);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

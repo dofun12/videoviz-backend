@@ -18,6 +18,8 @@ public interface VideoRepository extends JpaRepository<VideoModel, Integer> {
     List<VideoModel> findAll();
 
 
+    VideoModel getByMd5Sum(String md5sum);
+
     @Query(value = "SELECT v.* from videoPlaylist vp inner join video v on v.idVideo = vp.idVideo where  vp.idPlaylist = ?1",nativeQuery = true)
     public List<VideoModel> findByIdPlaylist(Integer idPlaylist);
 
