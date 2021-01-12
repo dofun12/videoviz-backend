@@ -15,6 +15,8 @@ import java.util.Map;
 @Service
 public class MD5FillerService {
 
+
+
     @Autowired
     private VideoJDBCRepository videoJDBCRepository;
 
@@ -31,6 +33,8 @@ public class MD5FillerService {
                 videoModel.setIsfileexist(1);
                 videoModel.setVideoSize(String.valueOf(mp4File.length()));
                 videoRepository.save(videoModel);
+            }else{
+
             }
         }
     }

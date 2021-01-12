@@ -290,7 +290,7 @@ public class VideoJDBCRepository extends DefaultJDBCRepository {
     }
 
     public List<Map<String,Object>> getListMD5(){
-        String sql = "select w.idVideo,w.code,w.md5sum from video w where w.md5sum is null order by idVideo desc limit 100";
+        String sql = "select w.idVideo,w.code,w.md5sum,w.idLocation from video w where w.md5sum is null order by idVideo desc limit 100";
         return getJdbcTemplate().queryForList(sql);
     }
 

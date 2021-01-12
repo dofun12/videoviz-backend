@@ -57,7 +57,7 @@ public class VideoDownloadService {
 
         if (olm.isPresent() && !fila.contains(queue.getId())) {
 
-            StoreVideoTask task = new StoreVideoTask(olm.get().getPath(),queue, new OnStoreResult() {
+            StoreVideoTask task = new StoreVideoTask(olm.get().getPath(), queue, new OnStoreResult() {
                 @Override
                 public void onServiceStart(DownloadQueue queue) {
                     log.info("Iniciando Servico..." + queue.getId());
@@ -105,9 +105,9 @@ public class VideoDownloadService {
                 }
 
                 @Override
-                public void onReadyToFactoryImage(File basePath,File mp4File, DownloadQueue queue) {
+                public void onReadyToFactoryImage(File basePath, File mp4File, DownloadQueue queue) {
                     try {
-                        videoFileService.createPreviewImage(basePath.getAbsolutePath(),mp4File);
+                        videoFileService.createPreviewImage(basePath.getAbsolutePath(), mp4File);
                         DownloadQueue tmp = downloadQueueRepository.findById(queue.getId()).get();
                         tmp.setProgress(80);
                         tmp.setSituacao("Imagem OK");
@@ -120,13 +120,14 @@ public class VideoDownloadService {
 
                 @Override
                 public void onFinished(DownloadQueue downloadQueue, File file) {
-                    String md5Sum = Utils.getMD5SUM(file);
+                    String md5Sum = Utils.getMD5SumJava(file);
                     DownloadQueue tmp = downloadQueueRepository.findById(queue.getId()).get();
                     tmp.setProgress(90);
                     tmp.setSituacao("Gravando registro");
                     log.info(queue.getId() + ": Gravando Registro");
                     downloadQueueRepository.saveAndFlush(tmp);
-                    if (jdbcRepository.getByMD5(md5Sum).isEmpty()) {
+
+                    if (jdbcRepository.getByMD5(md5Sum) == null || jdbcRepository.getByMD5(md5Sum).isEmpty()) {
                         tmp.setProgress(95);
                         tmp.setSituacao("Buscando metadata");
                         log.info(queue.getId() + ": Buscando metadata");
