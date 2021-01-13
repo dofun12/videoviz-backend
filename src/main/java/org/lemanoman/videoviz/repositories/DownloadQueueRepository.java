@@ -14,6 +14,9 @@ public interface DownloadQueueRepository extends JpaRepository <DownloadQueue, I
 
     List<DownloadQueue> findTop10ByFinishedAndInProgress(Integer finished, Integer inProgress);
 
+    List<DownloadQueue> findByFinishedAndFailedAndPageUrl(Integer finished, Integer failed, String pageUrl);
+
+
     List<DownloadQueue> findByFinishedAndInProgress(Integer finished, Integer inProgress);
 
 

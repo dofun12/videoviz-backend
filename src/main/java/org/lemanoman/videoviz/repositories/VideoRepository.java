@@ -1,6 +1,8 @@
 package org.lemanoman.videoviz.repositories;
 
 import org.lemanoman.videoviz.model.VideoModel;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -17,6 +19,7 @@ public interface VideoRepository extends JpaRepository<VideoModel, Integer> {
     @Query(value = "SELECT v,vu FROM VideoModel v join v.videoUrls vu ")
     List<VideoModel> findAll();
 
+    List<VideoModel> findAllByInvalidAndIsfileexist(Integer invalid, Integer isfileexist, Pageable pageable);
 
     VideoModel getByMd5Sum(String md5sum);
 

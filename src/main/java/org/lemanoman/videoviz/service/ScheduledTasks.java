@@ -18,6 +18,9 @@ public class ScheduledTasks {
     private Boolean verifyQueue;
 
     @Autowired
+    private CheckupService checkupService;
+
+    @Autowired
     private MD5FillerService md5FillerService;
 
     @Autowired
@@ -36,6 +39,11 @@ public class ScheduledTasks {
         }else{
             log.info("Serviço runMD5Service desativado");
         }
+    }
+
+    @Scheduled(initialDelay = 60000, fixedRate = 600000)
+    public void runCheckup() {
+        //checkupService.runCheckoutIFPending();
     }
 
     @Scheduled(initialDelay = 60000, fixedRate = 300000)

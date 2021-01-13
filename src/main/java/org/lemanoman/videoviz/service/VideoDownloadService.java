@@ -46,13 +46,56 @@ public class VideoDownloadService {
 
     private ExecutorService executorService;
     private List<Integer> fila = new ArrayList<>();
-
+    private Set<String> usedPages = null;
     private static final Logger log = LoggerFactory.getLogger(VideoDownloadService.class);
+
+    private void removeFromUsedPages(String page){
+        if(usedPages==null|| usedPages.isEmpty()) return;
+        usedPages.removeIf(tmpPage -> tmpPage.equals(page));
+    }
+
+    private boolean isDuplicated(DownloadQueue queue) {
+        final String pageUrl = queue.getPageUrl();
+        if(pageUrl==null|| pageUrl.isEmpty()){
+            return true;
+        }
+
+        List<DownloadQueue> list = downloadQueueRepository.findByFinishedAndFailedAndPageUrl(1,0,pageUrl);
+        if(list!=null && !list.isEmpty()){
+            return true;
+        }
+
+        if (usedPages == null) {
+            usedPages = new HashSet<>();
+            usedPages.add(queue.getPageUrl());
+            return false;
+        }
+
+        Optional<String> find = usedPages.stream().filter(page -> page.equals(queue.getPageUrl()))
+                .filter(Objects::nonNull).findFirst();
+        if (find.isPresent()) {
+            return true;
+        }
+
+        usedPages.add(queue.getPageUrl());
+        return false;
+
+    }
 
     public void addToQueue(DownloadQueue queue) {
 
 
         log.info("Tentando adicionar... " + queue.getId());
+        if(isDuplicated(queue)){
+            DownloadQueue tmp = downloadQueueRepository.findById(queue.getId()).get();
+            tmp.setProgress(100);
+            tmp.setFailed(1);
+            tmp.setInProgress(0);
+            tmp.setSituacao("Duplicado");
+            tmp.setFinished(1);
+            downloadQueueRepository.saveAndFlush(tmp);
+            return;
+        }
         Optional<LocationModel> olm = locationRepository.findById(queue.getIdLocation());
 
         if (olm.isPresent() && !fila.contains(queue.getId())) {
@@ -126,7 +169,7 @@ public class VideoDownloadService {
                     tmp.setSituacao("Gravando registro");
                     log.info(queue.getId() + ": Gravando Registro");
                     downloadQueueRepository.saveAndFlush(tmp);
-
+                    removeFromUsedPages(downloadQueue.getPageUrl());
                     if (jdbcRepository.getByMD5(md5Sum) == null || jdbcRepository.getByMD5(md5Sum).isEmpty()) {
                         tmp.setProgress(95);
                         tmp.setSituacao("Buscando metadata");
