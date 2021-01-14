@@ -69,21 +69,25 @@ public class VerifyVideoFastTask implements Runnable {
         int invalid = 0;
         int valid = 0;
         int total = videoList.size();
+        int found = 0;
         for (VideoLiteModel vm : videoList) {
             if (vm.getIdLocation() == null) continue;
+
 
             LocationModel locationModel = getByIdLocation(vm.getIdLocation());
             if (fileExists(locationModel, vm.getCode())) {
                 setValid(vm, true);
-                log.info("Found: " + vm.getTitle());
+                found++;
                 continue;
             }
             invalid++;
             setValid(vm, false);
         }
+        log.info("Founded: {} ; Invalids: {}; Total: {}",found,invalid,total);
+        log.info("Flushing...");
         videoRepository.flush();
         long end = System.currentTimeMillis();
-        log.info("Valids: " + valid + "; Invalids: " + invalid + ";Total: " + total + "; Took: " + (end - start) + "ms");
+        log.info("Finishing page {} took {}ms",page,(end - start));
         page = page + 1;
         doVerify(page);
     }

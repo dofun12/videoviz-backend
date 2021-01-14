@@ -7,6 +7,8 @@ import org.lemanoman.videoviz.repositories.CheckupRepository;
 import org.lemanoman.videoviz.repositories.LocationRepository;
 import org.lemanoman.videoviz.repositories.VideoPageableRepository;
 import org.lemanoman.videoviz.repositories.VideoRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.test.context.ActiveProfiles;
@@ -21,7 +23,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 @Service
-@ActiveProfiles("dev")
 public class CheckupService {
 
     @Autowired
@@ -36,7 +37,7 @@ public class CheckupService {
     @Autowired
     private VideoPageableRepository videoPageableRepository;
 
-
+    private static final Logger log = LoggerFactory.getLogger(CheckupService.class);
     private Set<Integer> locationsIdStarted;
     private Set<Integer> locationsIdFinished;
     private Integer proccessedFiles = 0;
@@ -84,8 +85,9 @@ public class CheckupService {
         isVerifyFinished = false;
         isDiscoveryFinished = false;
 
-        List<CheckupModel> pendingList = checkupRepository.findByRunningAndFinishedAndLastVerifiedDate(0, 0, null);
+        List<CheckupModel> pendingList = checkupRepository.findByRunningAndFinished(0, 0);
         if (pendingList == null || pendingList.isEmpty()) {
+            log.info("Not checkups pending...");
             return;
         }
         locationsIdStarted = new HashSet<>();
