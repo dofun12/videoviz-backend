@@ -4,6 +4,10 @@ import org.lemanoman.videoviz.Constants;
 import org.lemanoman.videoviz.Resposta;
 import org.lemanoman.videoviz.dto.FileHeaderJS;
 import org.lemanoman.videoviz.dto.FileJS;
+import org.lemanoman.videoviz.model.CheckupModel;
+import org.lemanoman.videoviz.repositories.CheckupRepository;
+import org.lemanoman.videoviz.repositories.LocationRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +21,8 @@ import java.util.List;
 @RequestMapping(value = Constants.API_BASE_URL+"/file",produces = MediaType.APPLICATION_JSON_VALUE)
 
 public class FileController {
+    @Autowired
+    private CheckupRepository checkupRepository;
 
     @PostMapping("/get")
     public Resposta get(@RequestBody FileHeaderJS fileHeaderJS) {
@@ -35,6 +41,17 @@ public class FileController {
             ex.printStackTrace();
             return new Resposta().failed(ex);
         }
+    }
+
+    @PutMapping("/requestCheckup")
+    public Resposta requestCheckup() {
+        CheckupModel checkupModel = new CheckupModel();
+        checkupModel.setFinished(0);
+        checkupModel.setRunning(0);
+        checkupModel.setStatusMessage("Pendente");
+        checkupModel.setTotalVerified(0);
+        checkupRepository.saveAndFlush(checkupModel);
+        return new Resposta(checkupModel);
     }
 
     @PostMapping("/download")

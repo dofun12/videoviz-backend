@@ -2,14 +2,22 @@ package org.lemanoman.videoviz.controller;
 
 import org.lemanoman.videoviz.Constants;
 import org.lemanoman.videoviz.Resposta;
+import org.lemanoman.videoviz.Utils;
 import org.lemanoman.videoviz.model.LocationModel;
+import org.lemanoman.videoviz.model.VideoModel;
 import org.lemanoman.videoviz.repositories.LocationRepository;
+import org.lemanoman.videoviz.repositories.VideoRepository;
+import org.lemanoman.videoviz.service.DiscoveryTask;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @RestController
 @RequestMapping(value = Constants.API_BASE_URL + "/locations", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -17,6 +25,11 @@ import java.util.Optional;
 public class LocationController {
     @Autowired
     LocationRepository locationRepository;
+
+    @Autowired
+    VideoRepository videoRepository;
+
+    final private ExecutorService executorService = Executors.newFixedThreadPool(2);
 
     @GetMapping("/")
     public Resposta list() {
@@ -39,6 +52,7 @@ public class LocationController {
                     lm.setContext(locationModel.getContext());
                     lm.setPath(locationModel.getPath());
                     LocationModel location = locationRepository.saveAndFlush(lm);
+                    discovery(locationModel);
                     return new Resposta(location).success();
                 }else{
                     return new Resposta().failed("Erro ao acessar/criar o diretorio, verifique as permissoes");
@@ -67,6 +81,10 @@ public class LocationController {
 
     }
 
+    private void discovery(LocationModel locationModel ){
+        //executorService.submit(new DiscoveryTask(videoRepository, Arrays.asList(locationModel));
+    }
+
     @PostMapping("/")
     public Resposta add(@RequestBody LocationModel locationModel) {
         try {
@@ -74,6 +92,7 @@ public class LocationController {
             locationModel.setPath(file.getAbsolutePath());
             if(isValidPath(locationModel)){
                 LocationModel location = locationRepository.saveAndFlush(locationModel);
+                discovery(locationModel);
                 return new Resposta(location).success();
             }else{
                 return new Resposta().failed("Erro ao acessar/criar o diretorio, verifique as permissoes");
