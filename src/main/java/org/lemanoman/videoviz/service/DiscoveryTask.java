@@ -2,49 +2,43 @@ package org.lemanoman.videoviz.service;
 
 import org.lemanoman.videoviz.Utils;
 import org.lemanoman.videoviz.dto.OnDiscovery;
+import org.lemanoman.videoviz.dto.TaskNames;
 import org.lemanoman.videoviz.model.LocationModel;
 import org.lemanoman.videoviz.model.VideoModel;
 import org.lemanoman.videoviz.repositories.VideoRepository;
 
 import java.io.File;
+import java.util.List;
 import java.util.Objects;
 
 public class DiscoveryTask implements Runnable{
-    private LocationModel locationModel;
+    private List<LocationModel> locationModelList;
     private VideoRepository videoRepository;
-    private OnDiscovery onDiscovery;
+    private OnTaskExecution onTaskExecution;
     private Integer max = null ;
 
-    public DiscoveryTask(VideoRepository videoRepository, LocationModel locationModel, Integer max, OnDiscovery onDiscovery){
-        this.locationModel = locationModel;
+    public DiscoveryTask(VideoRepository videoRepository, List<LocationModel> locationModelList, Integer max,OnTaskExecution onTaskExecution){
+        this.locationModelList = locationModelList;
         this.videoRepository = videoRepository;
-        this.onDiscovery = onDiscovery;
+        this.onTaskExecution = onTaskExecution;
         this.max = max;
     }
 
-    public DiscoveryTask(VideoRepository videoRepository, LocationModel locationModel, OnDiscovery onDiscovery){
-        this.locationModel = locationModel;
-        this.videoRepository = videoRepository;
-        this.onDiscovery = onDiscovery;
-    }
-
-    public DiscoveryTask(VideoRepository videoRepository, LocationModel locationModel){
-        this.locationModel = locationModel;
+    public DiscoveryTask(VideoRepository videoRepository, List<LocationModel> locationModelList){
+        this.locationModelList = locationModelList;
         this.videoRepository = videoRepository;
     }
 
-    private void finish(Integer totalFiles){
-        if(onDiscovery!=null){
-            onDiscovery.onFinish(locationModel,totalFiles);
+    private void finish(){
+        if(onTaskExecution!=null){
+            onTaskExecution.onFinish(TaskNames.DISCOVERY_TASK);
         }
     }
 
-    @Override
-    public void run() {
+    private void doAction(LocationModel locationModel){
         int totalFiles = 0;
         File dir = new File(locationModel.getPath() + "/mp4");
         if(!dir.exists()){
-            finish(totalFiles);
             return;
         }
 
@@ -77,6 +71,18 @@ public class DiscoveryTask implements Runnable{
             i++;
         }
         videoRepository.flush();
-        finish(totalFiles);
+    }
+
+    @Override
+    public void run() {
+        for (LocationModel locationModel : locationModelList) {
+            if(locationModel==null) continue;
+            try {
+                doAction(locationModel);
+            }catch (Exception ex){
+                ex.printStackTrace();
+            }
+        }
+        finish();
     }
 }

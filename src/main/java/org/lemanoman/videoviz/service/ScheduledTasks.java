@@ -41,9 +41,9 @@ public class ScheduledTasks {
         }
     }
 
-    @Scheduled(initialDelay = 60000, fixedRate = 600000)
+    @Scheduled(initialDelay = 10000, fixedRate = 600000)
     public void runCheckup() {
-        //checkupService.runCheckoutIFPending();
+        checkupService.runCheckoutIFPending();
     }
 
     @Scheduled(initialDelay = 60000, fixedRate = 300000)

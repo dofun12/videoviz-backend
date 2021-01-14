@@ -8,6 +8,13 @@ import java.util.Objects;
 @Entity
 @Table(name = "video")
 public class VideoModel implements Serializable {
+    public VideoModel() {
+    }
+
+    public VideoModel(Integer idVideo) {
+        this.idVideo = idVideo;
+    }
+
     @Id
     @GeneratedValue(strategy=GenerationType.IDENTITY)
     @Column(name = "idVideo")

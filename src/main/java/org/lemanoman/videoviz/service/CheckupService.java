@@ -1,10 +1,12 @@
 package org.lemanoman.videoviz.service;
 
 import org.lemanoman.videoviz.dto.OnDiscovery;
+import org.lemanoman.videoviz.dto.TaskNames;
 import org.lemanoman.videoviz.model.CheckupModel;
 import org.lemanoman.videoviz.model.LocationModel;
 import org.lemanoman.videoviz.repositories.CheckupRepository;
 import org.lemanoman.videoviz.repositories.LocationRepository;
+import org.lemanoman.videoviz.repositories.VideoPageableRepository;
 import org.lemanoman.videoviz.repositories.VideoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -32,22 +34,30 @@ public class CheckupService {
 
     @Autowired
     private VideoRepository videoRepository;
+
+    @Autowired
+    private VideoPageableRepository videoPageableRepository;
+
+
     private Set<Integer> locationsIdStarted;
     private Set<Integer> locationsIdFinished;
     private Integer proccessedFiles = 0;
     ExecutorService executorService = Executors.newFixedThreadPool(1);
+    private Integer idCheckup = null;
+    boolean isVerifyFinished = false;
+    boolean isDiscoveryFinished = false;
 
-    private OnDiscovery onDiscovery(Integer idCheckup) {
-        return (locationModel, totalFiles) -> {
-            locationsIdFinished.add(locationModel.getIdLocation());
-            proccessedFiles = totalFiles + proccessedFiles;
-            if (locationsIdStarted.size() == locationsIdFinished.size()) {
-                finish(idCheckup);
+    private OnTaskExecution onTaskExecution() {
+        return (taskName) -> {
+            if (TaskNames.VERIFY_VIDEO_TASK.equals(taskName)) isVerifyFinished = true;
+            if (TaskNames.DISCOVERY_TASK.equals(taskName)) isDiscoveryFinished = true;
+            if (isVerifyFinished && isDiscoveryFinished) {
+                finish();
             }
         };
     }
 
-    public void requestACheckup(){
+    public void requestACheckup() {
         CheckupModel checkupModel = new CheckupModel();
         checkupModel.setFinished(0);
         checkupModel.setRunning(0);
@@ -57,6 +67,10 @@ public class CheckupService {
     }
 
     public void runCheckoutIFPending() {
+        idCheckup = null;
+        isVerifyFinished = false;
+        isDiscoveryFinished = false;
+
         List<CheckupModel> pendingList = checkupRepository.findByRunningAndFinishedAndLastVerifiedDate(0, 0, null);
         if (pendingList == null || pendingList.isEmpty()) {
             return;
@@ -70,30 +84,33 @@ public class CheckupService {
         }
         CheckupModel checkupTemp = pendingList.get(0);
         CheckupModel checkupModel = checkupRepository.findById(checkupTemp.getId()).orElse(null);
-        if(checkupModel==null){
+        if (checkupModel == null) {
             return;
         }
+        idCheckup = checkupModel.getId();
         checkupModel.setRunning(1);
         checkupModel.setLastVerifiedDate(Timestamp.from(Instant.now()));
         checkupRepository.saveAndFlush(checkupModel);
 
-        for (LocationModel locationModel : locations) {
-            locationsIdStarted.add(locationModel.getIdLocation());
-            executorService.submit(new DiscoveryTask(videoRepository, locationModel,1 , onDiscovery(checkupModel.getId())));
-        }
+        executorService.submit(new DiscoveryTask(videoRepository, locations, 1, onTaskExecution()));
+        executorService.submit(new VerifyVideoFastTask(videoRepository, locationRepository, videoPageableRepository,onTaskExecution()));
         try {
-            executorService.awaitTermination(60, TimeUnit.MINUTES);
+            executorService.awaitTermination(30,TimeUnit.MINUTES);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
     }
 
-    private void finish(Integer idCheckup) {
-        CheckupModel checkupModel = checkupRepository.findById(idCheckup).orElse(null);
-        if(checkupModel==null){
+    private void finish() {
+        executorService.shutdown();
+        if (idCheckup == null) {
             return;
         }
+        CheckupModel checkupModel = checkupRepository.findById(idCheckup).orElse(null);
+        if (checkupModel == null) {
+            return;
+        }
+        checkupModel.setStatusMessage("Finalizado!");
         checkupModel.setRunning(0);
         checkupModel.setFinished(1);
         checkupRepository.saveAndFlush(checkupModel);

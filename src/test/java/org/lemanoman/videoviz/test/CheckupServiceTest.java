@@ -10,6 +10,7 @@ import org.lemanoman.videoviz.model.LocationModel;
 import org.lemanoman.videoviz.model.VideoModel;
 import org.lemanoman.videoviz.repositories.LocationRepository;
 import org.lemanoman.videoviz.repositories.VideoJDBCRepository;
+import org.lemanoman.videoviz.repositories.VideoPageableRepository;
 import org.lemanoman.videoviz.repositories.VideoRepository;
 import org.lemanoman.videoviz.service.CheckupService;
 import org.lemanoman.videoviz.service.VerifyVideoFastTask;
@@ -35,6 +36,9 @@ public class CheckupServiceTest {
     VideoRepository videoRepository;
 
     @Autowired
+    VideoPageableRepository videoPageableRepository;
+
+    @Autowired
     LocationRepository locationRepository;
 
     @Autowired
@@ -53,7 +57,7 @@ public class CheckupServiceTest {
 
     @Test
     public void testVerify() {
-        new VerifyVideoFastTask(videoRepository,locationRepository).run();
+        new VerifyVideoFastTask(videoRepository,locationRepository,videoPageableRepository).run();
     }
 
 

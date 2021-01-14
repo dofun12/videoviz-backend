@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
@@ -81,7 +82,7 @@ public class LocationController {
     }
 
     private void discovery(LocationModel locationModel ){
-        executorService.submit(new DiscoveryTask(videoRepository,locationModel));
+        //executorService.submit(new DiscoveryTask(videoRepository, Arrays.asList(locationModel));
     }
 
     @PostMapping("/")
