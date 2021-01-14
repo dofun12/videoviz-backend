@@ -10,5 +10,6 @@ import java.util.Optional;
 
 public interface CheckupRepository extends JpaRepository <CheckupModel, Integer> {
     List<CheckupModel> findByRunningAndFinishedAndLastVerifiedDate(Integer running,Integer finished, Date lastVerifiedDate);
+    List<CheckupModel> findByRunningAndFinished(Integer running,Integer finished);
 
 }

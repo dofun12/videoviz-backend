@@ -40,7 +40,7 @@ public class CheckupService {
     private Set<Integer> locationsIdStarted;
     private Set<Integer> locationsIdFinished;
     private Integer proccessedFiles = 0;
-    ExecutorService executorService = Executors.newFixedThreadPool(1);
+    private ExecutorService executorService = Executors.newFixedThreadPool(1);
     private Integer idCheckup = null;
     boolean isVerifyFinished = false;
     boolean isDiscoveryFinished = false;
@@ -54,6 +54,21 @@ public class CheckupService {
             }
         };
     }
+
+    public void clean(){
+        List<CheckupModel> invalids = checkupRepository.findByRunningAndFinished(1,0);
+        if(invalids==null||invalids.isEmpty()){
+            return;
+        }
+
+        for(CheckupModel cm:invalids){
+            cm.setRunning(0);
+            cm.setFinished(0);
+            checkupRepository.save(cm);
+        }
+        checkupRepository.flush();
+    }
+
 
     public void requestACheckup() {
         CheckupModel checkupModel = new CheckupModel();
@@ -90,7 +105,7 @@ public class CheckupService {
         checkupModel.setLastVerifiedDate(Timestamp.from(Instant.now()));
         checkupRepository.saveAndFlush(checkupModel);
 
-        executorService.submit(new DiscoveryTask(videoRepository, locations, 1, onTaskExecution()));
+        //executorService.submit(new DiscoveryTask(videoRepository, locations, 1, onTaskExecution()));
         executorService.submit(new VerifyVideoFastTask(videoRepository, locationRepository, videoPageableRepository,onTaskExecution()));
         try {
             executorService.awaitTermination(30,TimeUnit.MINUTES);
