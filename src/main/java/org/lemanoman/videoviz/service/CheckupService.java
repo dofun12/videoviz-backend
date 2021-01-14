@@ -49,8 +49,9 @@ public class CheckupService {
     private OnTaskExecution onTaskExecution() {
         return (taskName) -> {
             if (TaskNames.VERIFY_VIDEO_TASK.equals(taskName)) isVerifyFinished = true;
-            if (TaskNames.DISCOVERY_TASK.equals(taskName)) isDiscoveryFinished = true;
-            if (isVerifyFinished && isDiscoveryFinished) {
+            //if (TaskNames.DISCOVERY_TASK.equals(taskName)) isDiscoveryFinished = true;
+            //if (isVerifyFinished && isDiscoveryFinished) {
+            if (isVerifyFinished) {
                 finish();
             }
         };

@@ -15,7 +15,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>videoviz</groupId>
     <artifactId>videoviz-backend</artifactId>
-    <version>0.0.3-SNAPSHOT</version>
+    <version>0.0.4-SNAPSHOT</version>
     <scm>
         <developerConnection>scm:git:git@github.com:dofun12/videoviz-backend.git</developerConnection>
         <tag>HEAD</tag>
