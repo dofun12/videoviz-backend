@@ -49,7 +49,7 @@ public class VideoDiscoveryTest {
     //        return ContainerUtils.MYSQL_CONTAINER;
     //}
 
-    @Test
+    //@Test
     public void discovery() throws Exception {
         LocationModel locationModel = locationRepository.findByContext("/disk").orElse(null);
         if (locationModel == null) {

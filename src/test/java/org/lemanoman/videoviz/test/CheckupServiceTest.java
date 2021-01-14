@@ -49,13 +49,13 @@ public class CheckupServiceTest {
     //        return ContainerUtils.MYSQL_CONTAINER;
     //}
 
-    @Test
+    //@Test
     public void defaultCheckup() {
         checkupService.requestACheckup();
         checkupService.runCheckoutIFPending();
     }
 
-    @Test
+    //@Test
     public void testVerify() {
         new VerifyVideoFastTask(videoRepository,locationRepository,videoPageableRepository).run();
     }

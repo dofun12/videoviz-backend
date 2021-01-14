@@ -1,6 +1,5 @@
 package org.lemanoman.videoviz.service;
 
-import org.lemanoman.videoviz.dto.OnDiscovery;
 import org.lemanoman.videoviz.dto.TaskNames;
 import org.lemanoman.videoviz.model.CheckupModel;
 import org.lemanoman.videoviz.model.LocationModel;
@@ -10,7 +9,6 @@ import org.lemanoman.videoviz.repositories.VideoPageableRepository;
 import org.lemanoman.videoviz.repositories.VideoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.test.*;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.sql.Timestamp;
