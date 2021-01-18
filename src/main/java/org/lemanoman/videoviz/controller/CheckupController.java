@@ -37,7 +37,7 @@ public class CheckupController {
             ObjectNode node = new ObjectMapper().createObjectNode();
             String[] arrayLinks = links.split("\\n");
             StringBuilder builder = new StringBuilder();
-            List<String> validLinks = Arrays.asList(arrayLinks);
+            List<String> validLinks = checkupService.validadeLinks(Arrays.asList(arrayLinks));
             if(validLinks.isEmpty()){
                 return new Resposta().failed("Invalid links");
             }

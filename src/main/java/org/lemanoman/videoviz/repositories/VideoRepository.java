@@ -22,7 +22,7 @@ public interface VideoRepository extends JpaRepository<VideoModel, Integer> {
 
     List<VideoModel> findAllByInvalidAndIsfileexist(Integer invalid, Integer isfileexist, Pageable pageable);
 
-    @Query(value = "SELECT v,vu FROM VideoModel v join v.videoUrls vu  where vu.pageUrl in (:urls)")
+    @Query(value = "SELECT v,vu FROM VideoModel v join v.videoUrls vu  where v.isfileexist=1 and v.invalid = 0 and  vu.pageUrl in (:urls)")
     List<VideoModel> findAllByVideoPageUrl(@Param("urls")List<String> urls);
 
     VideoModel getByMd5Sum(String md5sum);
