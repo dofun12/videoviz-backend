@@ -3,6 +3,7 @@ package org.lemanoman.videoviz.service;
 import org.lemanoman.videoviz.dto.TaskNames;
 import org.lemanoman.videoviz.model.CheckupModel;
 import org.lemanoman.videoviz.model.LocationModel;
+import org.lemanoman.videoviz.model.VideoModel;
 import org.lemanoman.videoviz.repositories.CheckupRepository;
 import org.lemanoman.videoviz.repositories.LocationRepository;
 import org.lemanoman.videoviz.repositories.VideoPageableRepository;
@@ -11,16 +12,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 public class CheckupService {
@@ -57,13 +56,13 @@ public class CheckupService {
         };
     }
 
-    public void clean(){
-        List<CheckupModel> invalids = checkupRepository.findByRunningAndFinished(1,0);
-        if(invalids==null||invalids.isEmpty()){
+    public void clean() {
+        List<CheckupModel> invalids = checkupRepository.findByRunningAndFinished(1, 0);
+        if (invalids == null || invalids.isEmpty()) {
             return;
         }
 
-        for(CheckupModel cm:invalids){
+        for (CheckupModel cm : invalids) {
             cm.setRunning(0);
             cm.setFinished(0);
             checkupRepository.save(cm);
@@ -109,9 +108,9 @@ public class CheckupService {
         checkupRepository.saveAndFlush(checkupModel);
 
         //executorService.submit(new DiscoveryTask(videoRepository, locations, 1, onTaskExecution()));
-        executorService.submit(new VerifyVideoFastTask(videoRepository, locationRepository, videoPageableRepository,onTaskExecution()));
+        executorService.submit(new VerifyVideoFastTask(videoRepository, locationRepository, videoPageableRepository, onTaskExecution()));
         try {
-            executorService.awaitTermination(30,TimeUnit.MINUTES);
+            executorService.awaitTermination(30, TimeUnit.MINUTES);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -132,5 +131,51 @@ public class CheckupService {
         checkupRepository.saveAndFlush(checkupModel);
         executorService.shutdown();
     }
+
+    public List<String> validadeLinks(List<String> links) {
+        int i = 0;
+        int tot = 0;
+        int max = 10;
+        String[][] matrix = new String[links.size()][max];
+        for (String link : links) {
+            if (tot == max) {
+                i++;
+                tot = 0;
+            }
+            matrix[i][tot] = link.trim().replaceAll("\\n","").replaceAll("\\r","").replaceAll("\\t","");
+            tot++;
+        }
+        Set<String> uniqueLinks = new HashSet<>();
+        for (String[] vector : matrix) {
+            List<String> vectorList = Arrays.asList(vector);
+            if(vectorList.isEmpty()){
+                continue;
+            }
+            uniqueLinks.addAll(checkLinks(vectorList));
+        }
+        return new ArrayList<>(uniqueLinks);
+    }
+
+    private List<String> checkLinks(List<String> list) {
+        list = list.stream().filter(Objects::nonNull).collect(Collectors.toList());
+        if(list.isEmpty()){
+            return new ArrayList<>();
+        }
+
+
+        List<VideoModel> videoModels = videoRepository.findAllByVideoPageUrl(list);
+        Set<String> founded = videoModels.stream().filter(Objects::nonNull).map(item -> item.getVideoUrls().getPageUrl()).collect(Collectors.toSet());
+        list.stream().filter(Objects::nonNull).map(link -> {
+            if (founded.contains(link)) {
+                return link + ": EXISTS";
+            }
+            return link + ":  NEW";
+        }).forEach(System.out::println);
+        System.out.println("========================");
+        return list.stream()
+                .filter(item -> !founded.contains(item))
+                .collect(Collectors.toList());
+    }
+
 
 }
