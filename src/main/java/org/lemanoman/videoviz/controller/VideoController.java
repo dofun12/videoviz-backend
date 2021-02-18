@@ -11,9 +11,11 @@ import org.apache.http.impl.client.HttpClients;
 import org.lemanoman.videoviz.Constants;
 import org.lemanoman.videoviz.Resposta;
 import org.lemanoman.videoviz.Scrapper;
+import org.lemanoman.videoviz.Utils;
 import org.lemanoman.videoviz.dto.*;
 import org.lemanoman.videoviz.model.*;
 import org.lemanoman.videoviz.repositories.*;
+import org.lemanoman.videoviz.service.TagService;
 import org.lemanoman.videoviz.service.VideoDownloadService;
 import org.lemanoman.videoviz.service.VideoFileService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,10 +66,105 @@ public class VideoController {
     @Autowired
     private VideoHistoryRepository videoHistoryRepository;
 
+    @Autowired
+    private TagService tagService;
+
     @GetMapping("/")
     public Resposta listAll() {
         try {
             return new Resposta(videoRepository.findAll()).success();
+        } catch (Exception ex) {
+            return new Resposta().failed(ex);
+        }
+    }
+
+    private Resposta getFileInfo(VideoModel videoModel){
+        if(videoModel==null){
+            return new Resposta().failed("Video not found on db");
+        }
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode videoNode = mapper.createObjectNode();
+        videoNode.put("code",videoModel.getCode());
+        videoNode.put("idVideo",videoModel.getIdVideo());
+        videoNode.put("md5sum",videoModel.getMd5Sum());
+        videoNode.put("favorite",videoModel.getFavorite());
+        videoNode.put("title",videoModel.getTitle());
+        videoNode.put("rating",videoModel.getRating());
+        if(videoModel.getVideoUrls()!=null){
+            videoNode.put("pageUrl",videoModel.getVideoUrls().getPageUrl());
+        }
+        videoNode.put("tags",tagService.getTagsByIdVideo(videoModel.getIdVideo()));
+
+        videoNode.put("totalWatched",videoModel.getTotalWatched());
+        videoNode.put("original_tags",videoModel.getOriginalTags());
+        videoNode.put("favorite",videoModel.getFavorite());
+        videoNode.put("idLocation",videoModel.getIdLocation());
+        videoNode.put("dateAdded",videoModel.getDateAdded().getTime());
+
+        String basePath = null;
+        LocationModel locationModel = locationRepository.findById(videoModel.getIdLocation()).orElse(null);
+        if(locationModel!=null && locationModel.getPath()!=null){
+            basePath = locationModel.getPath();
+            videoNode.put("image_link",ServletUriComponentsBuilder.fromCurrentContextPath()
+                    .path("/media")
+                    .path("/image")
+                    .path("/")
+                    .path(locationModel.getContext())
+                    .path("/")
+                    .path(videoModel.getCode())
+                    .queryParam("time", new Date().getTime()/1000)
+                    .toUriString());
+            videoNode.put("video_link",ServletUriComponentsBuilder.fromCurrentContextPath()
+                    .path("/media")
+                    .path("/video")
+                    .path("/")
+                    .path(locationModel.getContext())
+                    .path("/")
+                    .path(videoModel.getCode())
+                    .toUriString());
+        }
+        videoNode.put("basePath",basePath);
+
+        File mp4File = videoFileService.getFileByVideoModel(locationRepository,videoModel);
+        if(mp4File==null|| !mp4File.exists()){
+            videoNode.put("fileexists",false);
+            return new Resposta(videoNode);
+        }
+        videoNode.put("fileexists",true);
+        ObjectNode fileNode = mapper.createObjectNode();
+        fileNode.put("file_size",mp4File.length());
+        fileNode.put("filename",mp4File.getName());
+        fileNode.put("path",mp4File.getAbsolutePath());
+        fileNode.put("actual_md5Sum", Utils.getMD5SumJava(mp4File));
+        videoNode.set("file",fileNode);
+        return new Resposta(videoNode).success();
+    }
+
+    @GetMapping("/md5/{md5Hash}")
+    public Resposta getByHash(@PathVariable String md5Hash) {
+        try {
+            VideoModel videoModel = videoRepository.getByMd5Sum(md5Hash);
+            return getFileInfo(videoModel);
+        } catch (Exception ex) {
+            return new Resposta().failed(ex);
+        }
+    }
+
+    @GetMapping("/code/{code}")
+    public Resposta getFileByCode(@PathVariable String code) {
+        try {
+            VideoModel videoModel = videoRepository.getByCode(code);
+            return getFileInfo(videoModel);
+        } catch (Exception ex) {
+            return new Resposta().failed(ex);
+        }
+    }
+
+    @GetMapping("/idVideo/{idVideo}")
+    public Resposta getFileByCode(@PathVariable Integer idVideo) {
+        try {
+            VideoModel videoModel = videoRepository.getByIdVideo(idVideo);
+            return getFileInfo(videoModel);
         } catch (Exception ex) {
             return new Resposta().failed(ex);
         }

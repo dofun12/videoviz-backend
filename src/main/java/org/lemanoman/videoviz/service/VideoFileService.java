@@ -5,6 +5,11 @@ import org.lemanoman.videoviz.Constants;
 import org.lemanoman.videoviz.SysCommandsUtils;
 import org.lemanoman.videoviz.Utils;
 import org.lemanoman.videoviz.dto.StoreResult;
+import org.lemanoman.videoviz.model.LocationModel;
+import org.lemanoman.videoviz.model.VideoModel;
+import org.lemanoman.videoviz.repositories.ImagesRepository;
+import org.lemanoman.videoviz.repositories.LocationRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -99,6 +104,16 @@ public class VideoFileService {
 
     public StoreResult storeVideo(String filename, InputStream inputStream) {
         return storeVideo(uploadlocation, filename, inputStream);
+    }
+
+    public File getFileByVideoModel(LocationRepository repository,VideoModel videoModel){
+        if(repository==null) return null;
+        if(videoModel==null) return null;
+        if(videoModel.getCode()==null) return null;
+        if(videoModel.getIdLocation()==null) return null;
+        LocationModel locationModel = repository.findById(videoModel.getIdLocation()).orElse(null);
+        if(locationModel==null) return null;
+        return new File(locationModel.getPath() + File.separator+ "mp4" + File.separator + videoModel.getCode() + ".mp4");
     }
 
 

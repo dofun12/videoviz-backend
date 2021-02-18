@@ -18,8 +18,7 @@ import org.springframework.data.domain.Pageable;
 
 
 import java.io.File;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 
 public class VerifyVideoFastTask implements Runnable {
@@ -28,13 +27,22 @@ public class VerifyVideoFastTask implements Runnable {
     private List<LocationModel> availableLocation;
     private VideoPageableRepository videoPageableRepository;
     private OnTaskExecution onTaskExecution;
+    private Map<Integer, String> cacheLocation;
     private static final Logger log = LoggerFactory.getLogger(VerifyVideoFastTask.class);
+
+
+    private void initCacheLocation() {
+        this.cacheLocation = new HashMap<>();
+        List<LocationModel> locationModelList = this.locationRepository.findAll();
+        locationModelList.forEach(row -> cacheLocation.put(row.getIdLocation(), row.getPath()));
+    }
 
     public VerifyVideoFastTask(VideoRepository videoRepository, LocationRepository locationRepository, VideoPageableRepository videoPageableRepository, OnTaskExecution onTaskExecution) {
         this.videoRepository = videoRepository;
         this.locationRepository = locationRepository;
         this.videoPageableRepository = videoPageableRepository;
         this.onTaskExecution = onTaskExecution;
+
     }
 
     public VerifyVideoFastTask(VideoRepository videoRepository, LocationRepository locationRepository, VideoPageableRepository videoPageableRepository) {
@@ -53,9 +61,16 @@ public class VerifyVideoFastTask implements Runnable {
 
 
     public List<VideoLiteModel> getList(int page) {
-        Page<VideoLiteModel> paginator = videoPageableRepository.findAllByInvalidAndIsfileexist(0, 1, PageRequest.of(page, 500));
-        log.info("Page {} of {} with a total of {} elements",page,paginator.getTotalPages(),paginator.getTotalElements());
+        Page<VideoLiteModel> paginator = videoPageableRepository.findAll(PageRequest.of(page, 500));
+        log.info("Page {} of {} with a total of {} elements", page, paginator.getTotalPages(), paginator.getTotalElements());
         return paginator.toList();
+    }
+
+    private boolean hasDifference(VideoLiteModel before, boolean isValidNow) {
+        if (!isValidNow && Objects.equals(before.getInvalid(), 0) && Objects.equals(before.getInvalid(), 1)) {
+            return true;
+        }
+        return isValidNow && Objects.equals(before.getInvalid(), 1) && Objects.equals(before.getIsfileexist(), 1);
     }
 
     private void doVerify(int page) {
@@ -66,36 +81,56 @@ public class VerifyVideoFastTask implements Runnable {
             return;
         }
 
+
         int invalid = 0;
-        int valid = 0;
+        int skipped = 0;
         int total = videoList.size();
         int found = 0;
         for (VideoLiteModel vm : videoList) {
             if (vm.getIdLocation() == null) continue;
+            String path = cacheLocation.get(vm.getIdLocation());
+            boolean isValid = false;
 
+            if (fileExists(path, vm.getCode())) {
+                isValid = true;
+            }
 
-            LocationModel locationModel = getByIdLocation(vm.getIdLocation());
-            if (fileExists(locationModel, vm.getCode())) {
+            LocationModel lm = searchByLocations(path,vm.getCode());
+            if(lm!=null){
+                setValid(vm,true,lm);
+                continue;
+            }
+
+            if (!hasDifference(vm, isValid)) {
+                skipped++;
+                continue;
+            }
+
+            if (isValid) {
                 setValid(vm, true);
                 found++;
                 continue;
             }
+
             invalid++;
             setValid(vm, false);
         }
-        log.info("Founded: {} ; Invalids: {}; Total: {}",found,invalid,total);
+        log.info("Founded: {} ; Invalids: {}; Skipped: {}; Total: {}", found, invalid,skipped, total);
         log.info("Flushing...");
-        videoRepository.flush();
+        if(total > skipped){
+            videoRepository.flush();
+        }
+
         long end = System.currentTimeMillis();
-        log.info("Finishing page {} took {}ms",page,(end - start));
+        log.info("Finishing page {} took {}ms", page, (end - start));
         page = page + 1;
         doVerify(page);
     }
 
     @Override
     public void run() {
-        availableLocation = this.locationRepository.findAll();
-        if (availableLocation.isEmpty()) return;
+        initCacheLocation();
+        if (cacheLocation.isEmpty()) return;
         try {
             doVerify(0);
         } catch (Exception ex) {
@@ -110,11 +145,18 @@ public class VerifyVideoFastTask implements Runnable {
         }
     }
 
-    private void setValid(VideoLiteModel vm, boolean valid) {
+    private void setValid(VideoLiteModel vm, boolean valid){
+        setValid(vm,valid,null);
+    }
+
+    private void setValid(VideoLiteModel vm, boolean valid,LocationModel locationModel) {
         try {
             VideoModel vtemp = videoRepository.findById(vm.getIdVideo()).orElse(null);
             if (vtemp == null) {
                 return;
+            }
+            if(locationModel!=null){
+                vtemp.setIdLocation(locationModel.getIdLocation());
             }
             if (valid) {
                 vtemp.setInvalid(0);
@@ -133,8 +175,21 @@ public class VerifyVideoFastTask implements Runnable {
     }
 
 
-    private boolean fileExists(LocationModel locationModel, String code) {
-        return new File(locationModel.getPath() + "/mp4/" + code + ".mp4").exists();
+    private boolean fileExists(String path, String code) {
+        return new File(path + "/mp4/" + code + ".mp4").exists();
+    }
+
+    private LocationModel searchByLocations(String path, String code) {
+        for(Map.Entry<Integer,String> entry: cacheLocation.entrySet()){
+            if(fileExists(entry.getValue(),code)){
+                LocationModel lm = new LocationModel();
+                lm.setPath(path);
+                lm.setIdLocation(entry.getKey());
+                lm.setPath(entry.getValue());
+                return lm;
+            };
+        }
+        return null;
     }
 
 }

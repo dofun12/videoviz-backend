@@ -60,18 +60,26 @@ public class CheckupServiceTest {
     //}
 
     //@Test
-    public void defaultCheckup() {
-        checkupService.requestACheckup();
+    public void defaultCheckupVideos() {
+        //checkupService.requestACheckup(CheckupService.CheckupOperation.CHECKUP_IMAGES);
+        checkupService.requestACheckup(CheckupService.CheckupOperation.CHECKUP_VIDEOS);
         checkupService.runCheckoutIFPending();
     }
 
     //@Test
+    public void defaultCheckupImages() {
+        //checkupService.requestACheckup(CheckupService.CheckupOperation.CHECKUP_IMAGES);
+        checkupService.requestACheckup(CheckupService.CheckupOperation.CHECKUP_IMAGES);
+        checkupService.runCheckoutIFPending();
+    }
+
+
     public void testVerify() {
         new VerifyVideoFastTask(videoRepository,locationRepository,videoPageableRepository).run();
     }
 
 
-    @Test
+    //@Test
     public void testVerifyLinks() {
         List<String> lines = readFile("E:\\WinFiles\\links.txt");
         if(lines==null||lines.isEmpty()){

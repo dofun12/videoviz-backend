@@ -4,10 +4,7 @@ import org.lemanoman.videoviz.dto.TaskNames;
 import org.lemanoman.videoviz.model.CheckupModel;
 import org.lemanoman.videoviz.model.LocationModel;
 import org.lemanoman.videoviz.model.VideoModel;
-import org.lemanoman.videoviz.repositories.CheckupRepository;
-import org.lemanoman.videoviz.repositories.LocationRepository;
-import org.lemanoman.videoviz.repositories.VideoPageableRepository;
-import org.lemanoman.videoviz.repositories.VideoRepository;
+import org.lemanoman.videoviz.repositories.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,10 +28,20 @@ public class CheckupService {
     private CheckupRepository checkupRepository;
 
     @Autowired
+    private ImagesRepository imagesRepository;
+
+    @Autowired
+    private VideoFileService videoFileService;
+
+    @Autowired
     private VideoRepository videoRepository;
 
     @Autowired
     private VideoPageableRepository videoPageableRepository;
+
+    private static final String OPERATION_CHECKUP_IMAGES = "CHECKUP_IMAGES";
+    private static final String OPERATION_CHECKUP_VIDEOS = "CHECKUP_VIDEOS";
+    private static final String OPERATION_DISCOVERY = "DISCOVERY";
 
     private static final Logger log = LoggerFactory.getLogger(CheckupService.class);
     private Set<Integer> locationsIdStarted;
@@ -45,14 +52,13 @@ public class CheckupService {
     boolean isVerifyFinished = false;
     boolean isDiscoveryFinished = false;
 
+    public enum CheckupOperation {
+        CHECKUP_IMAGES, CHECKUP_VIDEOS, DISCOVERY
+    }
+
     private OnTaskExecution onTaskExecution() {
         return (taskName) -> {
-            if (TaskNames.VERIFY_VIDEO_TASK.equals(taskName)) isVerifyFinished = true;
-            //if (TaskNames.DISCOVERY_TASK.equals(taskName)) isDiscoveryFinished = true;
-            //if (isVerifyFinished && isDiscoveryFinished) {
-            if (isVerifyFinished) {
-                finish();
-            }
+            finish(false);
         };
     }
 
@@ -71,10 +77,23 @@ public class CheckupService {
     }
 
 
-    public void requestACheckup() {
+    public void requestACheckup(CheckupOperation operation) {
         CheckupModel checkupModel = new CheckupModel();
         checkupModel.setFinished(0);
         checkupModel.setRunning(0);
+        String operationValue = null;
+        switch (operation) {
+            case DISCOVERY:
+                operationValue = OPERATION_DISCOVERY;
+                break;
+            case CHECKUP_IMAGES:
+                operationValue = OPERATION_CHECKUP_IMAGES;
+                break;
+            case CHECKUP_VIDEOS:
+                operationValue = OPERATION_CHECKUP_VIDEOS;
+                break;
+        }
+        checkupModel.setOperation(operationValue);
         checkupModel.setStatusMessage("Pendente");
         checkupModel.setTotalVerified(0);
         checkupRepository.saveAndFlush(checkupModel);
@@ -102,21 +121,58 @@ public class CheckupService {
         if (checkupModel == null) {
             return;
         }
+
         idCheckup = checkupModel.getId();
         checkupModel.setRunning(1);
         checkupModel.setLastVerifiedDate(Timestamp.from(Instant.now()));
         checkupRepository.saveAndFlush(checkupModel);
 
-        //executorService.submit(new DiscoveryTask(videoRepository, locations, 1, onTaskExecution()));
-        executorService.submit(new VerifyVideoFastTask(videoRepository, locationRepository, videoPageableRepository, onTaskExecution()));
+        if (Objects.equals(checkupModel.getOperation(), OPERATION_CHECKUP_VIDEOS)){
+            checkupVideos();
+            return;
+        }
+        if (Objects.equals(checkupModel.getOperation(), OPERATION_CHECKUP_IMAGES)){
+            checkupImages();
+            return;
+        }
+        if (Objects.equals(checkupModel.getOperation(), OPERATION_DISCOVERY)){
+            discovery();
+        }
+
+    }
+
+    private void checkupImages() {
+        executorService.submit(new VerifyImageTask(videoRepository, locationRepository, videoPageableRepository, imagesRepository, videoFileService, onTaskExecution()));
         try {
             executorService.awaitTermination(30, TimeUnit.MINUTES);
+            finish(true);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    private void finish() {
+    private void discovery() {
+        executorService.submit(new DiscoveryTask(videoRepository, locationRepository.findAll(), 1, onTaskExecution()));
+        try {
+            executorService.awaitTermination(30, TimeUnit.MINUTES);
+            finish(true);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    private void checkupVideos() {
+        executorService.submit(new VerifyVideoFastTask(videoRepository, locationRepository, videoPageableRepository, onTaskExecution()));
+        try {
+            executorService.awaitTermination(30, TimeUnit.MINUTES);
+            finish(true);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void finish(boolean timeout) {
         executorService.shutdown();
         if (idCheckup == null) {
             return;
@@ -125,7 +181,11 @@ public class CheckupService {
         if (checkupModel == null) {
             return;
         }
-        checkupModel.setStatusMessage("Finalizado!");
+        String message = "Finalizado!";
+        if(timeout){
+            message = "Timeouted :P";
+        }
+        checkupModel.setStatusMessage(message);
         checkupModel.setRunning(0);
         checkupModel.setFinished(1);
         checkupRepository.saveAndFlush(checkupModel);
@@ -142,13 +202,13 @@ public class CheckupService {
                 i++;
                 tot = 0;
             }
-            matrix[i][tot] = link.trim().replaceAll("\\n","").replaceAll("\\r","").replaceAll("\\t","");
+            matrix[i][tot] = link.trim().replaceAll("\\n", "").replaceAll("\\r", "").replaceAll("\\t", "");
             tot++;
         }
         Set<String> uniqueLinks = new HashSet<>();
         for (String[] vector : matrix) {
             List<String> vectorList = Arrays.asList(vector);
-            if(vectorList.isEmpty()){
+            if (vectorList.isEmpty()) {
                 continue;
             }
             uniqueLinks.addAll(checkLinks(vectorList));
@@ -158,7 +218,7 @@ public class CheckupService {
 
     private List<String> checkLinks(List<String> list) {
         list = list.stream().filter(Objects::nonNull).collect(Collectors.toList());
-        if(list.isEmpty()){
+        if (list.isEmpty()) {
             return new ArrayList<>();
         }
 
