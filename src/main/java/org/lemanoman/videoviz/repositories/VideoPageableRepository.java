@@ -17,5 +17,7 @@ public interface VideoPageableRepository extends PagingAndSortingRepository<Vide
 
     Page<VideoLiteModel> findAllByInvalidAndIsfileexist(Integer invalid, Integer isfileexist, Pageable pageable);
 
+    Page<VideoLiteModel> findAll(Pageable pageable);
+
 
 }

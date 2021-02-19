@@ -23,6 +23,9 @@ public class CheckupModel {
     @Column(name = "running")
     private Integer running;
 
+    @Column(name = "operation")
+    private String operation;
+
     @Column(name = "lastVerifiedDate")
     private Timestamp lastVerifiedDate;
 
@@ -32,6 +35,14 @@ public class CheckupModel {
 
     public void setId(Integer id) {
         this.id = id;
+    }
+
+    public String getOperation() {
+        return operation;
+    }
+
+    public void setOperation(String operation) {
+        this.operation = operation;
     }
 
     public Integer getTotalVerified() {

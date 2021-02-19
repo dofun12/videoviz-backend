@@ -13,6 +13,7 @@ public interface TagRepository extends JpaRepository<TagsModel, Integer> {
     @Override
     public Optional<TagsModel> findById(Integer id);
 
+    public List<TagsModel> findByIdTagIn(List<Integer> idTagList);
 
     @Query(value = "SELECT t.* from videoTags vt inner join tags t on vt.idTag = t.idTag where  vt.idVideo = ?1",nativeQuery = true)
     public List<TagsModel> findByIdVideo(Integer idVideo);
