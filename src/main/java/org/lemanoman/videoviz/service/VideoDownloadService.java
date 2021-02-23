@@ -193,6 +193,7 @@ public class VideoDownloadService {
                     String md5Sum = Utils.getMD5SumJava(file);
                     DownloadQueue tmp = downloadQueueRepository.findById(queue.getId()).get();
                     tmp.setProgress(90);
+                    tmp.setTmppath(file.getAbsolutePath());
                     tmp.setSituacao("Gravando registro");
                     log.info(queue.getId() + ": Gravando Registro");
                     downloadQueueRepository.saveAndFlush(tmp);
@@ -222,12 +223,13 @@ public class VideoDownloadService {
                             tmp.setSituacao("Reaproveitando Metadata");
                             log.info(queue.getId() + ": Reaproveitando Metadata do idVideo {}",videoModel.getIdVideo());
                             downloadQueueRepository.saveAndFlush(tmp);
-                            FileCopyUtils.copy(file, possibleDestinationFile);
+                            moveFiles(locationModel,file,videoModel.getCode());
                             videoModel.setIdLocation(downloadQueue.getIdLocation());
                             tmp.setProgress(100);
                             tmp.setInProgress(0);
                             tmp.setFailed(0);
                             tmp.setFinished(1);
+                            tmp.setSituacao("Metadata reutilizada");
                             videoRepository.saveAndFlush(videoModel);
                             downloadQueueRepository.saveAndFlush(tmp);
                         } catch (Exception e) {
@@ -242,6 +244,7 @@ public class VideoDownloadService {
                         return;
 
                     }
+
                     createVideoModel(downloadQueue,locationModel, file, md5Sum, tmp, queue);
                     fila.removeIf(id -> id.equals(downloadQueue.getId()));
 
@@ -284,14 +287,8 @@ public class VideoDownloadService {
         return new String(newChars).trim();
     }
 
-    private VideoModel createVideoModelAndCopyFileIFNeeded(LocationModel locationModel,VideoModel videoModel, File file) {
+    private void moveFiles(LocationModel locationModel,File file,String code){
         try {
-            if (videoModel != null) return videoModel;
-
-            videoModel = new VideoModel();
-            String code = getNextCode();
-            videoModel.setVideoSize(String.valueOf(file.length()));
-            videoModel.setCode(code);
             String oldName = file.getName().replace(".mp4", "");
             File oldImageFile = videoFileService.getImageFileByCode(locationModel.getPath(),oldName);
             if (oldImageFile != null && oldImageFile.exists()) {
@@ -309,6 +306,19 @@ public class VideoDownloadService {
                 file.delete();
                 log.info("Deleted {}",file.getAbsolutePath());
             }
+        }catch (Exception ex){
+            ex.printStackTrace();
+        }
+
+    }
+
+    private VideoModel createVideoModelAndCopyFileIFNeeded(LocationModel locationModel,VideoModel videoModel, File file) {
+        try {
+            videoModel = new VideoModel();
+            String code = getNextCode();
+            videoModel.setVideoSize(String.valueOf(file.length()));
+            videoModel.setCode(code);
+            moveFiles(locationModel,file,code);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -319,9 +329,6 @@ public class VideoDownloadService {
     private void createVideoModel(DownloadQueue downloadQueue,LocationModel locationModel, File file, String md5Sum, DownloadQueue tmp, DownloadQueue queue) {
         try {
             VideoModel videoModel = null;
-            if (downloadQueue.getIdVideo() != null) {
-                videoModel = getVideoModel(downloadQueue.getIdVideo());
-            }
 
             videoModel = createVideoModelAndCopyFileIFNeeded(locationModel,videoModel, file);
 
@@ -350,6 +357,7 @@ public class VideoDownloadService {
             tmp.setProgress(100);
             tmp.setInProgress(0);
             tmp.setFailed(0);
+            tmp.setIdVideo(videoModel.getIdVideo());
             tmp.setFinished(1);
             tmp.setTitle(videoModel.getTitle());
             tmp.setSituacao("Finalizado com sucesso");

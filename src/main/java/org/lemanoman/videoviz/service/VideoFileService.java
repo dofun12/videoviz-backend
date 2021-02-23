@@ -49,7 +49,7 @@ public class VideoFileService {
     }
 
     public File getImageFileByCode(String basePath,String code) {
-        return new File(basePath + File.separator + "img" + code + ".png");
+        return new File(basePath + File.separator + "img" + File.separator + code + ".png");
     }
 
     public File getVideoFileByCode(String basePath,String codeOrName) {

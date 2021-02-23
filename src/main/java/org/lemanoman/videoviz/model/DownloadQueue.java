@@ -20,6 +20,8 @@ public class DownloadQueue implements Serializable {
     @Column(name = "idLocation")
     private Integer idLocation;
 
+    @Column(name = "tmppath")
+    private String tmppath;
 
     @Column(name = "title")
     private String title;
@@ -176,6 +178,14 @@ public class DownloadQueue implements Serializable {
 
     public void setIdLocation(Integer idLocation) {
         this.idLocation = idLocation;
+    }
+
+    public String getTmppath() {
+        return tmppath;
+    }
+
+    public void setTmppath(String tmppath) {
+        this.tmppath = tmppath;
     }
 
     public void setIdVideo(Integer idVideo) {

@@ -9,6 +9,8 @@ import org.apache.http.impl.client.HttpClients;
 import org.lemanoman.videoviz.Constants;
 import org.lemanoman.videoviz.Utils;
 import org.lemanoman.videoviz.model.DownloadQueue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -20,6 +22,7 @@ public class StoreVideoTask implements Runnable {
     private DownloadQueue downloadQueue;
     private OnStoreResult storeResult;
     private String baseDir;
+    private static final Logger log = LoggerFactory.getLogger(StoreVideoTask.class);
 
     public StoreVideoTask(String baseDir, DownloadQueue downloadQueue, OnStoreResult onStoreResult) {
         this.storeResult = onStoreResult;
@@ -113,8 +116,12 @@ public class StoreVideoTask implements Runnable {
                     perms.add(PosixFilePermission.GROUP_READ);
                     Files.setPosixFilePermissions(file1.toPath(), perms);
                     if (storeResult != null) storeResult.onPermissionSuccess(downloadQueue);
+                }catch (UnsupportedOperationException e){
+                    file1.setWritable(true);
+                    file1.setReadable(true);
+                    if (storeResult != null) storeResult.onPermissionSuccess(downloadQueue);
                 } catch (Exception ex) {
-                    ex.printStackTrace();
+                    log.error(ex.getMessage());
                 }
                 if (storeResult != null) storeResult.onReadyToFactoryImage(dir, file1, downloadQueue);
                 if (storeResult != null) storeResult.onFinished(downloadQueue, file1);
