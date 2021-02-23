@@ -597,7 +597,15 @@ public class VideoController {
     @GetMapping("/recreate/{code}")
     public Resposta rebuild(@PathVariable("code") String code) {
         try {
-            File mp4File = videoFileService.getVideoFileByCode(code);
+            VideoModel videoModel = videoRepository.getByCode(code);
+            if(videoModel==null){
+                return  new Resposta().failed("video with code id"+code+" was not founded");
+            }
+            LocationModel locationModel = locationRepository.findById(videoModel.getIdLocation()).orElse(null);
+            if(locationModel==null){
+                return  new Resposta().failed(videoModel.getIdLocation()+" location not found of "+videoModel.getIdVideo());
+            }
+            File mp4File = videoFileService.getVideoFileByCode(locationModel.getPath(),code);
             if (mp4File.isFile() && mp4File.exists()) {
                 File image = videoFileService.createPreviewImage(mp4File);
                 if (image.exists()) {
@@ -633,16 +641,12 @@ public class VideoController {
 
     private Resposta addUrl(String downloadUrl, String pageUrl) {
         try {
-            VideoModel videoModel = new VideoModel();
-            videoModel.setCode(getNextCode());
-            videoRepository.saveAndFlush(videoModel);
-
             DownloadQueue downloadQueue = new DownloadQueue();
-            downloadQueue.setIdVideo(videoModel.getIdVideo());
+            downloadQueue.setIdVideo(null);
             downloadQueue.setPageUrl(pageUrl);
             downloadQueue.setSituacao("Aguardando");
             downloadQueue.setVideoUrl(downloadUrl);
-            downloadQueue.setCode(videoModel.getCode());
+            downloadQueue.setCode(null);
             downloadQueueRepository.saveAndFlush(downloadQueue);
             if (addToRealQueue) {
                 videoDownloadService.addToQueue(downloadQueue);

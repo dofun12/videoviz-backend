@@ -7,6 +7,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.lemanoman.videoviz.Constants;
+import org.lemanoman.videoviz.Utils;
 import org.lemanoman.videoviz.model.DownloadQueue;
 
 import java.io.*;
@@ -64,7 +65,7 @@ public class StoreVideoTask implements Runnable {
             }
         }
 
-        String filePath = Constants.getVideoFile(baseDir, downloadQueue.getCode() + ".mp4");
+        String filePath = Constants.getVideoFile(baseDir, Utils.getRandomString() + ".mp4");
         RequestConfig requestConfig = RequestConfig.custom()
                 .setConnectionRequestTimeout(20000)
                 .setConnectTimeout(20000)

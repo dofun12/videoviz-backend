@@ -15,9 +15,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.FileCopyUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -82,7 +85,8 @@ public class VideoDownloadService {
 
     }
 
-    public void addToQueue(DownloadQueue queue) {
+
+    public ExecutorService addToQueue(DownloadQueue queue) {
 
 
         log.info("Tentando adicionar... " + queue.getId());
@@ -94,109 +98,18 @@ public class VideoDownloadService {
             tmp.setSituacao("Duplicado");
             tmp.setFinished(1);
             downloadQueueRepository.saveAndFlush(tmp);
-            return;
+            return null;
         }
         Optional<LocationModel> olm = locationRepository.findById(queue.getIdLocation());
 
         if (!olm.isPresent() || fila.contains(queue.getId())) {
             log.info("O id já esta na fila " + queue.getId());
-            return;
+            return null;
         }
 
-        StoreVideoTask task = new StoreVideoTask(olm.get().getPath(), queue, new OnStoreResult() {
-            @Override
-            public void onServiceStart(DownloadQueue queue) {
-                log.info("Iniciando Servico..." + queue.getId());
-            }
+        StoreVideoTask task = getStoreVideoTask(queue, olm);
 
-            @Override
-            public void onDownloadStart(DownloadQueue queue, long size) {
-                DownloadQueue tmp = downloadQueueRepository.findById(queue.getId()).get();
-                tmp.setVideoSize(String.valueOf(size));
-                tmp.setDateAdded(new Date());
-                tmp.setInProgress(1);
-                tmp.setProgress(10);
-                tmp.setSituacao("Iniciado");
-                log.info(queue.getId() + ": iniciado");
-                downloadQueueRepository.saveAndFlush(tmp);
-            }
-
-            @Override
-            public void onDownloadError(Exception ex) {
-                DownloadQueue tmp = downloadQueueRepository.findById(queue.getId()).get();
-                tmp.setFailed(1);
-                tmp.setFinished(1);
-                tmp.setInProgress(0);
-                tmp.setSituacao("Erro download: " + ex.getMessage());
-                log.info(queue.getId() + ": Erro download");
-                downloadQueueRepository.saveAndFlush(tmp);
-            }
-
-            @Override
-            public void onDownloadSuccess(DownloadQueue queue) {
-                DownloadQueue tmp = downloadQueueRepository.findById(queue.getId()).get();
-                tmp.setProgress(60);
-                tmp.setSituacao("Baixado");
-                log.info(queue.getId() + ": Baixado");
-                downloadQueueRepository.saveAndFlush(tmp);
-            }
-
-            @Override
-            public void onPermissionSuccess(DownloadQueue queue) {
-                DownloadQueue tmp = downloadQueueRepository.findById(queue.getId()).get();
-                tmp.setProgress(70);
-                tmp.setSituacao("Permissao OK");
-                log.info(queue.getId() + ": Permissao OK");
-                downloadQueueRepository.saveAndFlush(tmp);
-            }
-
-            @Override
-            public void onReadyToFactoryImage(File basePath, File mp4File, DownloadQueue queue) {
-                try {
-                    videoFileService.createPreviewImage(basePath.getAbsolutePath(), mp4File);
-                    DownloadQueue tmp = downloadQueueRepository.findById(queue.getId()).get();
-                    tmp.setProgress(80);
-                    tmp.setSituacao("Imagem OK");
-                    log.info(queue.getId() + ": Imagem OK");
-                    downloadQueueRepository.saveAndFlush(tmp);
-                } catch (IOException | InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            @Override
-            public void onFinished(DownloadQueue downloadQueue, File file) {
-                String md5Sum = Utils.getMD5SumJava(file);
-                DownloadQueue tmp = downloadQueueRepository.findById(queue.getId()).get();
-                tmp.setProgress(90);
-                tmp.setSituacao("Gravando registro");
-                log.info(queue.getId() + ": Gravando Registro");
-                downloadQueueRepository.saveAndFlush(tmp);
-                removeFromUsedPages(downloadQueue.getPageUrl());
-
-                if (jdbcRepository.getByMD5(md5Sum) != null && !jdbcRepository.getByMD5(md5Sum).isEmpty()) {
-                    tmp.setProgress(100);
-                    tmp.setInProgress(0);
-                    tmp.setFailed(1);
-                    tmp.setFinished(1);
-                    log.info(queue.getId() + ": Video já existe");
-                    tmp.setSituacao("Video já existe");
-                    file.delete();
-                    downloadQueueRepository.saveAndFlush(tmp);
-                    fila.removeIf(id -> id.equals(downloadQueue.getId()));
-                    return;
-                }
-
-                tmp.setProgress(95);
-                tmp.setSituacao("Buscando metadata");
-                log.info(queue.getId() + ": Buscando metadata");
-                downloadQueueRepository.saveAndFlush(tmp);
-
-                createVideoModel(downloadQueue, file, md5Sum, tmp, queue);
-                fila.removeIf(id -> id.equals(downloadQueue.getId()));
-
-            }
-        });
+        //runTask
         fila.add(queue.getId());
         if (executorService == null) {
             executorService = Executors.newFixedThreadPool(Constants.MAX_THREADS);
@@ -204,32 +117,213 @@ public class VideoDownloadService {
 
         log.info("O id: " + queue.getId() + " foi adicionado na fila");
         executorService.submit(task);
-
+        return executorService;
 
     }
 
-    private VideoModel getVideoModel(Integer idVideo){
+    public StoreVideoTask getStoreVideoTask(DownloadQueue queue, Optional<LocationModel> olm) {
+        return new StoreVideoTask(olm.get().getPath(), queue, new OnStoreResult() {
+                @Override
+                public void onServiceStart(DownloadQueue queue1) {
+                    log.info("Iniciando Servico..." + queue1.getId());
+                }
+
+                @Override
+                public void onDownloadStart(DownloadQueue queue1, long size) {
+                    DownloadQueue tmp = downloadQueueRepository.findById(queue1.getId()).get();
+                    tmp.setVideoSize(String.valueOf(size));
+                    tmp.setDateAdded(new Date());
+                    tmp.setInProgress(1);
+                    tmp.setProgress(10);
+                    tmp.setSituacao("Iniciado");
+                    log.info(queue1.getId() + ": iniciado");
+                    downloadQueueRepository.saveAndFlush(tmp);
+                }
+
+                @Override
+                public void onDownloadError(Exception ex) {
+                    DownloadQueue tmp = downloadQueueRepository.findById(queue.getId()).get();
+                    tmp.setFailed(1);
+                    tmp.setFinished(1);
+                    tmp.setInProgress(0);
+                    tmp.setSituacao("Erro download: " + ex.getMessage());
+                    log.info(queue.getId() + ": Erro download");
+                    downloadQueueRepository.saveAndFlush(tmp);
+                }
+
+                @Override
+                public void onDownloadSuccess(DownloadQueue queue1) {
+                    DownloadQueue tmp = downloadQueueRepository.findById(queue1.getId()).get();
+                    tmp.setProgress(60);
+                    tmp.setSituacao("Baixado");
+                    log.info(queue1.getId() + ": Baixado");
+                    downloadQueueRepository.saveAndFlush(tmp);
+                }
+
+                @Override
+                public void onPermissionSuccess(DownloadQueue queue1) {
+                    DownloadQueue tmp = downloadQueueRepository.findById(queue1.getId()).get();
+                    tmp.setProgress(70);
+                    tmp.setSituacao("Permissao OK");
+                    log.info(queue1.getId() + ": Permissao OK");
+                    downloadQueueRepository.saveAndFlush(tmp);
+                }
+
+                @Override
+                public void onReadyToFactoryImage(File basePath, File mp4File, DownloadQueue queue1) {
+                    try {
+                        videoFileService.createPreviewImage(basePath.getAbsolutePath(), mp4File);
+                        DownloadQueue tmp = downloadQueueRepository.findById(queue1.getId()).get();
+                        tmp.setProgress(80);
+                        tmp.setSituacao("Imagem OK");
+                        log.info(queue1.getId() + ": Imagem OK");
+                        downloadQueueRepository.saveAndFlush(tmp);
+                    } catch (IOException | InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void onFinished(DownloadQueue downloadQueue, File file) {
+                    LocationModel locationModel = locationRepository.findById(downloadQueue.getIdLocation()).orElse(null);
+                    if(locationModel==null){
+                        log.error("DownloadQueue idlocation must be setted");
+                        return;
+                    }
+                    String md5Sum = Utils.getMD5SumJava(file);
+                    DownloadQueue tmp = downloadQueueRepository.findById(queue.getId()).get();
+                    tmp.setProgress(90);
+                    tmp.setSituacao("Gravando registro");
+                    log.info(queue.getId() + ": Gravando Registro");
+                    downloadQueueRepository.saveAndFlush(tmp);
+                    removeFromUsedPages(downloadQueue.getPageUrl());
+
+                    VideoModel videoModel = videoRepository.getByMd5Sum(md5Sum);
+                    if (videoModel != null && videoModel.getCode() != null) {
+                        File possibleDestinationFile = videoFileService.getVideoFileByCode(locationModel.getPath(),videoModel.getCode());
+                        if (possibleDestinationFile.exists() && possibleDestinationFile.length() > 0) {
+                            videoModel.setInvalid(0);
+                            videoModel.setIsfileexist(1);
+                            tmp.setProgress(100);
+                            tmp.setInProgress(0);
+                            tmp.setFailed(0);
+                            tmp.setFinished(1);
+                            log.info("{} Video já existe, founded video with same md5 (idVideo: {})",queue.getId(),videoModel.getIdVideo());
+                            tmp.setSituacao("Video já existe");
+                            file.delete();
+                            videoRepository.saveAndFlush(videoModel);
+                            downloadQueueRepository.saveAndFlush(tmp);
+                            fila.removeIf(id -> id.equals(downloadQueue.getId()));
+                            return;
+                        }
+
+                        try {
+                            tmp.setProgress(95);
+                            tmp.setSituacao("Reaproveitando Metadata");
+                            log.info(queue.getId() + ": Reaproveitando Metadata do idVideo {}",videoModel.getIdVideo());
+                            downloadQueueRepository.saveAndFlush(tmp);
+                            FileCopyUtils.copy(file, possibleDestinationFile);
+                            videoModel.setIdLocation(downloadQueue.getIdLocation());
+                            tmp.setProgress(100);
+                            tmp.setInProgress(0);
+                            tmp.setFailed(0);
+                            tmp.setFinished(1);
+                            videoRepository.saveAndFlush(videoModel);
+                            downloadQueueRepository.saveAndFlush(tmp);
+                        } catch (Exception e) {
+                            tmp.setProgress(95);
+                            tmp.setFailed(1);
+                            tmp.setFinished(1);
+                            tmp.setSituacao("Erro ao copiar o arquivo");
+                            log.error(queue.getId() + ": Erro ao copiar o arquivo");
+                            e.printStackTrace();
+                            downloadQueueRepository.saveAndFlush(tmp);
+                        }
+                        return;
+
+                    }
+                    createVideoModel(downloadQueue,locationModel, file, md5Sum, tmp, queue);
+                    fila.removeIf(id -> id.equals(downloadQueue.getId()));
+
+                }
+            });
+    }
+
+    private VideoModel getVideoModel(Integer idVideo) {
         Optional<VideoModel> optionalVideoModel = videoRepository.findById(idVideo);
-        if(!optionalVideoModel.isPresent()){
-            log.error("VideoModel from id {} was not found",idVideo);
+        if (!optionalVideoModel.isPresent()) {
+            log.error("VideoModel from id {} was not found", idVideo);
             return null;
         }
         return optionalVideoModel.get();
     }
 
-    private void createVideoModel(DownloadQueue downloadQueue, File file, String md5Sum, DownloadQueue tmp, DownloadQueue queue) {
+    private synchronized String getNextCode() {
+
+        int max = 7;
+
+        String oldCode = jdbcRepository.getLastCode();
+        Integer intCode;
+        if (oldCode == null || oldCode.equals("null")) {
+            intCode = 0;
+        } else {
+            intCode = Integer.parseInt(oldCode);
+        }
+
+        intCode++;
+        char[] chars = intCode.toString().toCharArray();
+        char[] newChars = new char[max];
+
+        for (int i = (chars.length - 1); i >= 0; i--) {
+            int y = (newChars.length - chars.length);
+            newChars[i + y] = chars[i];
+        }
+        for (int i = 0; i < (newChars.length - chars.length); i++) {
+            newChars[i] = '0';
+        }
+        return new String(newChars).trim();
+    }
+
+    private VideoModel createVideoModelAndCopyFileIFNeeded(LocationModel locationModel,VideoModel videoModel, File file) {
         try {
-            if(downloadQueue.getIdVideo()==null){
-                log.error("Error creating videoModel idVideo is null");
-                return;
+            if (videoModel != null) return videoModel;
+
+            videoModel = new VideoModel();
+            String code = getNextCode();
+            videoModel.setVideoSize(String.valueOf(file.length()));
+            videoModel.setCode(code);
+            String oldName = file.getName().replace(".mp4", "");
+            File oldImageFile = videoFileService.getImageFileByCode(locationModel.getPath(),oldName);
+            if (oldImageFile != null && oldImageFile.exists()) {
+                File newImage = videoFileService.getImageFileByCode(locationModel.getPath(),code);
+                FileCopyUtils.copy(oldImageFile, newImage);
+                log.info("Replacing {} for {}",oldImageFile.getAbsolutePath(),newImage.getAbsolutePath());
+                oldImageFile.delete();
+                log.info("Deleted {}",oldImageFile.getAbsolutePath());
+
+            }
+            if (file.exists()) {
+                File newFile = videoFileService.getVideoFileByCode(locationModel.getPath(),code);
+                FileCopyUtils.copy(file, newFile);
+                log.info("Replacing {} for {}",file.getAbsolutePath(),newFile.getAbsolutePath());
+                file.delete();
+                log.info("Deleted {}",file.getAbsolutePath());
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return videoModel;
+
+    }
+
+    private void createVideoModel(DownloadQueue downloadQueue,LocationModel locationModel, File file, String md5Sum, DownloadQueue tmp, DownloadQueue queue) {
+        try {
+            VideoModel videoModel = null;
+            if (downloadQueue.getIdVideo() != null) {
+                videoModel = getVideoModel(downloadQueue.getIdVideo());
             }
 
-
-            VideoModel videoModel = getVideoModel(downloadQueue.getIdVideo());
-            if(videoModel==null){
-                return;
-            }
-
+            videoModel = createVideoModelAndCopyFileIFNeeded(locationModel,videoModel, file);
 
             ScrapResult result = null;
             try {
@@ -239,13 +333,13 @@ public class VideoDownloadService {
             }
 
             fillTitle(videoModel, result);
-
+            videoModel.setIdLocation(downloadQueue.getIdLocation());
             videoModel.setInvalid(0);
             videoModel.setIsdeleted(0);
             videoModel.setDateAdded(new Timestamp(new Date().getTime()));
             videoModel.setIsfileexist(1);
             videoModel.setMd5Sum(md5Sum);
-            videoModel.setVideoSize(String.valueOf(file.length()));
+            //videoModel.setVideoSize(String.valueOf(file.length()));
             videoRepository.saveAndFlush(videoModel);
 
             VideoUrlsModel videoUrlsModel = new VideoUrlsModel();
@@ -262,19 +356,16 @@ public class VideoDownloadService {
             log.info(queue.getId() + ": Finalizado com sucesso");
             downloadQueueRepository.saveAndFlush(tmp);
         } catch (Exception ex) {
+            ex.printStackTrace();
             file.delete();
-            VideoModel videoModel = videoRepository.findById(downloadQueue.getIdVideo()).get();
-            videoRepository.delete(videoModel);
-
             tmp.setProgress(100);
             tmp.setInProgress(0);
             tmp.setFailed(1);
             tmp.setFinished(1);
-            tmp.setTitle(videoModel.getTitle());
             log.info(queue.getId() + ": Erro ao gravar");
             tmp.setSituacao("Erro ao gravar: " + ex.getMessage());
             downloadQueueRepository.saveAndFlush(tmp);
-            ex.printStackTrace();
+
         }
     }
 

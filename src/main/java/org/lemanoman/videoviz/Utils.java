@@ -7,8 +7,40 @@ import java.nio.file.Paths;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
+import java.util.Date;
+import java.util.Random;
 
 public class Utils {
+    static String abc = "abcdefghijklmnopgrstuvxyz";
+    private static char getChar(int i){
+        if(i>abc.length()){
+            return 'a';
+        }
+        return abc.charAt(i);
+    }
+
+    private static String getRandomString(int maxLength){
+        StringBuilder builder = new StringBuilder();
+        Random random = new Random();
+        for(int i=0;i<maxLength;i++){
+            builder.append(getChar(random.nextInt(abc.length())));
+        }
+        return builder.toString();
+    }
+
+    public static String getRandomString(){
+        long now = new Date().getTime();
+        String prefix = getRandomString(4);
+        String text = now+prefix;
+        String base64Str = Base64.getEncoder().encodeToString(text.getBytes());
+        return base64Str
+                .replaceAll("=","")
+                .replaceAll("_","")
+                .replaceAll("\\.","")
+                .replaceAll("-","");
+    }
+
     public static String getMD5SUM(File f) {
         try {
             if (f.exists() && f.isFile()) {

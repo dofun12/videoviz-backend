@@ -48,12 +48,12 @@ public class VideoFileService {
         return null;
     }
 
-    public File getImageFileByCode(String code) {
-        return new File(imgLocation + File.separator + code + ".mp4");
+    public File getImageFileByCode(String basePath,String code) {
+        return new File(basePath + File.separator + "img" + code + ".png");
     }
 
-    public File getVideoFileByCode(String code) {
-        return new File(uploadlocation + File.separator + code + ".mp4");
+    public File getVideoFileByCode(String basePath,String codeOrName) {
+        return new File(basePath + File.separator + "mp4" + File.separator+ codeOrName + ".mp4");
     }
 
     public File createPreviewImage(File mp4File) throws IOException, InterruptedException {
