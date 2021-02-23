@@ -19,8 +19,6 @@ import org.springframework.util.FileCopyUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -121,6 +119,19 @@ public class VideoDownloadService {
 
     }
 
+    private void addOrModifyPageUrl(VideoModel videoModel, String pageUrl){
+        VideoUrlsModel videoUrlsModel = videoUrlsRepository.findById(videoModel.getIdVideo()).orElse(null);
+        if(videoUrlsModel == null){
+            videoUrlsModel = new VideoUrlsModel();
+            videoUrlsModel.setIdVideo(videoModel.getIdVideo());
+            videoUrlsModel.setPageUrl(pageUrl);
+            videoUrlsRepository.saveAndFlush(videoUrlsModel);
+            return;
+        }
+        videoUrlsModel.setPageUrl(pageUrl);
+        videoUrlsRepository.saveAndFlush(videoUrlsModel);
+    }
+
     public StoreVideoTask getStoreVideoTask(DownloadQueue queue, Optional<LocationModel> olm) {
         return new StoreVideoTask(olm.get().getPath(), queue, new OnStoreResult() {
                 @Override
@@ -205,10 +216,13 @@ public class VideoDownloadService {
                         if (possibleDestinationFile.exists() && possibleDestinationFile.length() > 0) {
                             videoModel.setInvalid(0);
                             videoModel.setIsfileexist(1);
+                            addOrModifyPageUrl(videoModel,downloadQueue.getPageUrl());
                             tmp.setProgress(100);
                             tmp.setInProgress(0);
                             tmp.setFailed(0);
                             tmp.setFinished(1);
+
+
                             log.info("{} Video já existe, founded video with same md5 (idVideo: {})",queue.getId(),videoModel.getIdVideo());
                             tmp.setSituacao("Video já existe");
                             file.delete();
@@ -225,6 +239,8 @@ public class VideoDownloadService {
                             downloadQueueRepository.saveAndFlush(tmp);
                             moveFiles(locationModel,file,videoModel.getCode());
                             videoModel.setIdLocation(downloadQueue.getIdLocation());
+                            addOrModifyPageUrl(videoModel,downloadQueue.getPageUrl());
+
                             tmp.setProgress(100);
                             tmp.setInProgress(0);
                             tmp.setFailed(0);
@@ -312,26 +328,53 @@ public class VideoDownloadService {
 
     }
 
-    private VideoModel createVideoModelAndCopyFileIFNeeded(LocationModel locationModel,VideoModel videoModel, File file) {
+    private VideoModel getAvailableVideoModel(LocationModel locationModel,int tries){
+        if(tries>5){
+            return null;
+        }
         try {
-            videoModel = new VideoModel();
-            String code = getNextCode();
-            videoModel.setVideoSize(String.valueOf(file.length()));
+            VideoModel videoModel = new VideoModel();
+            String code = Utils.getRandomString(18);
             videoModel.setCode(code);
-            moveFiles(locationModel,file,code);
+            videoModel.setIdLocation(locationModel.getIdLocation());
+            videoRepository.saveAndFlush(videoModel);
+            return videoModel;
+        }catch (Exception e){
+            e.printStackTrace();
+            tries = tries+1;
+            return getAvailableVideoModel(locationModel,tries);
+        }
+
+    }
+
+    private VideoModel createVideoModelAndCopyFileIFNeeded(LocationModel locationModel, File file) {
+        VideoModel videoModel1 = getAvailableVideoModel(locationModel,0);
+        if(videoModel1==null){
+            return null;
+        }
+        try {
+            moveFiles(locationModel,file,videoModel1.getCode());
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-        return videoModel;
+        return videoModel1;
 
     }
 
     private void createVideoModel(DownloadQueue downloadQueue,LocationModel locationModel, File file, String md5Sum, DownloadQueue tmp, DownloadQueue queue) {
         try {
-            VideoModel videoModel = null;
-
-            videoModel = createVideoModelAndCopyFileIFNeeded(locationModel,videoModel, file);
-
+            VideoModel videoModel = createVideoModelAndCopyFileIFNeeded(locationModel, file);
+            if(videoModel==null){
+                file.delete();
+                tmp.setProgress(100);
+                tmp.setInProgress(0);
+                tmp.setFailed(1);
+                tmp.setFinished(1);
+                log.info(queue.getId() + ": Algum erro aconteceu na hora de salvar o videoModel");
+                tmp.setSituacao("Algum erro aconteceu na hora de salvar o videoModel");
+                downloadQueueRepository.saveAndFlush(tmp);
+                return;
+            }
             ScrapResult result = null;
             try {
                 result = Scrapper.getScrapResult(downloadQueue.getPageUrl());

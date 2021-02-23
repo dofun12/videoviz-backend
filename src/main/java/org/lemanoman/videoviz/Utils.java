@@ -20,7 +20,7 @@ public class Utils {
         return abc.charAt(i);
     }
 
-    private static String getRandomString(int maxLength){
+    public static String getRandomString(int maxLength){
         StringBuilder builder = new StringBuilder();
         Random random = new Random();
         for(int i=0;i<maxLength;i++){
@@ -28,10 +28,9 @@ public class Utils {
         }
         return builder.toString();
     }
-
-    public static String getRandomString(){
+    public static String getRandomName(int max){
         long now = new Date().getTime();
-        String prefix = getRandomString(4);
+        String prefix = getRandomString(max);
         String text = now+prefix;
         String base64Str = Base64.getEncoder().encodeToString(text.getBytes());
         return base64Str
@@ -39,6 +38,10 @@ public class Utils {
                 .replaceAll("_","")
                 .replaceAll("\\.","")
                 .replaceAll("-","");
+    }
+
+    public static String getRandomName(){
+        return getRandomName(4);
     }
 
     public static String getMD5SUM(File f) {

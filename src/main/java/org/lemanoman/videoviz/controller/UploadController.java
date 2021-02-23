@@ -333,18 +333,12 @@ public class UploadController {
                 }
                 idLocation = bestLocation.getIdLocation();
             }
-            VideoModel videoModel = new VideoModel();
-            videoModel.setCode(getNextCode());
-            videoModel.setIdLocation(idLocation);
-            videoRepository.saveAndFlush(videoModel);
 
             DownloadQueue downloadQueue = new DownloadQueue();
-            downloadQueue.setIdVideo(videoModel.getIdVideo());
             downloadQueue.setPageUrl(pageUrl);
             downloadQueue.setIdLocation(idLocation);
             downloadQueue.setSituacao("Aguardando");
             downloadQueue.setVideoUrl(downloadUrl);
-            downloadQueue.setCode(videoModel.getCode());
             downloadQueueRepository.saveAndFlush(downloadQueue);
             if (addToRealQueue) {
                 videoDownloadService.addToQueue(downloadQueue);
