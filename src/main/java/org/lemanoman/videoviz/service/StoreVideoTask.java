@@ -68,7 +68,7 @@ public class StoreVideoTask implements Runnable {
             }
         }
 
-        String filePath = Constants.getVideoFile(baseDir, Utils.getRandomName() + ".mp4");
+        String filePath = Constants.getVideoFile(baseDir, "tmp-"+Utils.getRandomName() + ".mp4");
         RequestConfig requestConfig = RequestConfig.custom()
                 .setConnectionRequestTimeout(20000)
                 .setConnectTimeout(20000)
