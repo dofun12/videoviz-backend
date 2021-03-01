@@ -9,6 +9,7 @@ import org.lemanoman.videoviz.model.PlaylistModel;
 import org.lemanoman.videoviz.model.VideoPlaylistModel;
 import org.lemanoman.videoviz.model.VideoPlaylistPK;
 import org.lemanoman.videoviz.repositories.PlaylistRepository;
+import org.lemanoman.videoviz.repositories.VideoJDBCRepository;
 import org.lemanoman.videoviz.repositories.VideoPlaylistRepository;
 import org.lemanoman.videoviz.service.CheckupService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,19 @@ public class CheckupController {
 
     @Autowired
     CheckupService checkupService;
+
+    @Autowired
+    VideoJDBCRepository videoJDBCRepository;
+
+
+    @GetMapping(value = "/duplication/{md5sum}")
+    public Resposta testDuplicationResolver(@PathVariable("md5sum") String md5Sum){
+        try{
+            return new Resposta(checkupService.resolveDuplicate(videoJDBCRepository.getListDuplicates(md5Sum).get(0)));
+        }catch (Exception ex){
+            return new Resposta().failed(ex);
+        }
+    }
 
     @PostMapping(value = "/validadeLinks",consumes = MediaType.TEXT_PLAIN_VALUE)
     public Resposta validadeLinks(@RequestBody String links) {

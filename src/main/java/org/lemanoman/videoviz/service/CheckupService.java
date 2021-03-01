@@ -1,5 +1,14 @@
 package org.lemanoman.videoviz.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.cfg.SerializerFactoryConfig;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.ser.SerializerFactory;
+import org.lemanoman.videoviz.Utils;
+import org.lemanoman.videoviz.dto.Duplicated;
+import org.lemanoman.videoviz.dto.MergeStrategy;
 import org.lemanoman.videoviz.dto.TaskNames;
 import org.lemanoman.videoviz.model.CheckupModel;
 import org.lemanoman.videoviz.model.LocationModel;
@@ -37,6 +46,9 @@ public class CheckupService {
     private VideoRepository videoRepository;
 
     @Autowired
+    private VideoService videoService;
+
+    @Autowired
     private VideoPageableRepository videoPageableRepository;
 
     private static final String OPERATION_CHECKUP_IMAGES = "CHECKUP_IMAGES";
@@ -57,9 +69,127 @@ public class CheckupService {
     }
 
     private OnTaskExecution onTaskExecution() {
-        return (taskName) -> {
-            finish(false);
-        };
+        return (taskName) -> finish(false);
+    }
+
+    private void print(ObjectNode objectNode){
+        final ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+        try {
+            System.out.println(mapper.writeValueAsString(objectNode));
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public ObjectNode resolveDuplicate(Duplicated duplicated){
+        List<VideoModel> videoModelList = videoRepository.findAllByIdVideoIn(duplicated.getIdVideoList());
+        return videoModelList.stream().map(videoModel -> videoService.getVideoInfo(videoModel)).reduce((v1, v2) -> {
+            System.out.println("V1: ");
+            print(v1);
+            System.out.println("======================= x ==================");
+            print(v2);
+            ObjectNode videoNode = v1;
+            if(v2.get("fileexists").asBoolean()){
+                videoNode = v2;
+            }
+            videoNode.put("pageUrl",(String) merge(v1,v2,"pageUrl",MergeStrategy.TEXT_BIGGER_OR_NOT_NULL));
+            videoNode.put("totalWatched",(Integer) merge(v1,v2,"totalWatched",MergeStrategy.INT_SUM));
+            videoNode.put("tags",(String) merge(v1,v2,"tags",MergeStrategy.TEXT_INCREMENT_LIST));
+            videoNode.put("original_tags",(String) merge(v1,v2,"original_tags",MergeStrategy.TEXT_INCREMENT_LIST));
+            videoNode.put("favorite",(Integer) merge(v1,v2,"favorite",MergeStrategy.INT_BIGGER_OR_NOTNULL));
+            videoNode.put("rating",(Integer) merge(v1,v2,"rating",MergeStrategy.INT_BIGGER_OR_NOTNULL));
+            videoNode.put("duplicated_idVideos",(String) merge(v1,v2,"idVideo",MergeStrategy.TEXT_INCREMENT_LIST));
+
+            System.out.println("======================= Result: ==================");
+            print(videoNode);
+
+            return videoNode;
+        }).orElse(null);
+    }
+
+
+
+    private Object merge(ObjectNode objectNode, ObjectNode objectNode2, String key, MergeStrategy strategy){
+        switch (strategy){
+            case INT_BIGGER_OR_NOTNULL:
+                return keepBiggerOrNotNull(
+                   Utils.toInt(objectNode.get(key).asInt()),
+                   Utils.toInt(objectNode2.get(key).asInt())
+                );
+            case TEXT_INCREMENT_LIST:
+                return incrementTags(objectNode.get(key).asText(),objectNode2.get(key).asText());
+            case INT_SUM:
+                return sumValues(
+                   Utils.toInt(objectNode.get(key).asInt()),
+                   Utils.toInt(objectNode2.get(key).asInt())
+                );
+            case TEXT_BIGGER_OR_NOT_NULL:
+                return biggerLengthOrNotNull(
+                        objectNode.get(key).asText(),
+                        objectNode2.get(key).asText()
+                );
+            default: return null;
+        }
+    }
+
+    private Integer sumValues(Integer value,Integer value2){
+        if(value==null){
+            return value2;
+        }
+        if(value2==null){
+            return value;
+        }
+        return value2+value;
+    }
+
+    private String biggerLengthOrNotNull(String value,String value2){
+        if(value==null){
+            return value2;
+        }
+        if(value2==null){
+            return value;
+        }
+        if(value.length()>value2.length()){
+            return value;
+        }
+        return value2;
+    }
+
+    private Integer keepBiggerOrNotNull(Integer value,Integer value2){
+        if(value==null){
+            return value2;
+        }
+        if(value2==null){
+            return value;
+        }
+        if(value>value2){
+            return value;
+        }
+        return value2;
+    }
+
+    private String incrementTags(String tags,String anotherTags){
+        Set<String> mainList = new HashSet<>();
+        if(tags.isEmpty()){
+            return anotherTags;
+        }
+        if(anotherTags.isEmpty()){
+            return tags;
+        }
+        if(!tags.contains(",") && !"null".equals(tags)){
+            mainList.add(tags);
+        }
+
+        if(!anotherTags.contains(",") && !"null".equals(anotherTags)){
+            mainList.add(anotherTags);
+        }
+
+        mainList.addAll(Arrays.stream(tags.split(",")).collect(Collectors.toSet()));
+        mainList.addAll(Arrays.stream(anotherTags.split(",")).collect(Collectors.toSet()));
+
+        return mainList.stream().reduce((s, s2) -> s = s.trim()+","+s2.trim()).orElse(null);
+
     }
 
     public void clean() {

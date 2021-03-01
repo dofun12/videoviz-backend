@@ -210,7 +210,7 @@ public class VideoDownloadService {
                     downloadQueueRepository.saveAndFlush(tmp);
                     removeFromUsedPages(downloadQueue.getPageUrl());
 
-                    VideoModel videoModel = videoRepository.getByMd5Sum(md5Sum);
+                    VideoModel videoModel = videoRepository.findByMd5Sum(md5Sum).get(0);
                     if (videoModel != null && videoModel.getCode() != null) {
                         File possibleDestinationFile = videoFileService.getVideoFileByCode(locationModel.getPath(),videoModel.getCode());
                         if (possibleDestinationFile.exists() && possibleDestinationFile.length() > 0) {

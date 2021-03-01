@@ -6,6 +6,7 @@ import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.runner.RunWith;
 import org.lemanoman.videoviz.Utils;
+import org.lemanoman.videoviz.dto.Duplicated;
 import org.lemanoman.videoviz.model.LocationModel;
 import org.lemanoman.videoviz.model.VideoModel;
 import org.lemanoman.videoviz.repositories.LocationRepository;
@@ -33,6 +34,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 @RunWith(SpringRunner.class)
@@ -44,6 +46,10 @@ public class CheckupServiceTest {
 
     @Autowired
     VideoRepository videoRepository;
+
+    @Autowired
+    VideoJDBCRepository videoJDBCRepository;
+
 
     @Autowired
     VideoPageableRepository videoPageableRepository;
@@ -64,6 +70,22 @@ public class CheckupServiceTest {
         //checkupService.requestACheckup(CheckupService.CheckupOperation.CHECKUP_IMAGES);
         checkupService.requestACheckup(CheckupService.CheckupOperation.CHECKUP_VIDEOS);
         checkupService.runCheckoutIFPending();
+    }
+
+    //@Test
+    public void fileExisttDuplicationTest() {
+        //checkupService.requestACheckup(CheckupService.CheckupOperation.CHECKUP_IMAGES);
+        List<Duplicated> duplicatedList = videoJDBCRepository.getListDuplicates();
+        checkupService.resolveDuplicate(duplicatedList.get(0));
+    }
+
+    @Test
+    public void defaultDuplicationTest() {
+        //checkupService.requestACheckup(CheckupService.CheckupOperation.CHECKUP_IMAGES);
+        List<Duplicated> duplicatedList = videoJDBCRepository.getListDuplicates();
+        Random random = new Random();
+        int index = random.nextInt(duplicatedList.size());
+        checkupService.resolveDuplicate(duplicatedList.get(index));
     }
 
     //@Test

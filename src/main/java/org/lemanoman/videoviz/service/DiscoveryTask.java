@@ -55,7 +55,7 @@ public class DiscoveryTask implements Runnable{
 
             if (md5 == null) continue;
 
-            VideoModel vm = videoRepository.getByMd5Sum(md5);
+            VideoModel vm = videoRepository.findByMd5Sum(md5).get(0);
             if (vm == null) continue;
             vm.setInvalid(0);
             vm.setLocation(locationModel.getContext());

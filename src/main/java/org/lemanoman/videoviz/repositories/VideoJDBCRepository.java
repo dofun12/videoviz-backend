@@ -1,14 +1,12 @@
 package org.lemanoman.videoviz.repositories;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.lemanoman.videoviz.dto.CondicaoJS;
-import org.lemanoman.videoviz.dto.PesquisaAvancadaJS;
-import org.lemanoman.videoviz.dto.PesquisaJS;
-import org.lemanoman.videoviz.dto.VideoJS;
+import org.lemanoman.videoviz.dto.*;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -287,6 +285,24 @@ public class VideoJDBCRepository extends DefaultJDBCRepository {
         }
         List<Map<String, Object>> list = getJdbcTemplate().queryForList(sql);
         return mapper.convertValue(list, ArrayNode.class);
+    }
+
+    public List<Duplicated> getListDuplicates(){
+        String sql = "select count(0) as total,md5sum,group_concat(idVideo)  as idVideos from video group by md5sum having total>1 order by  total desc";
+        List<Map<String, Object>> list = getJdbcTemplate().queryForList(sql);
+        if(list.isEmpty()){
+            return new ArrayList<>();
+        }
+        return list.stream().map(Duplicated::new).collect(Collectors.toList());
+    }
+
+    public List<Duplicated> getListDuplicates(String md5Sum){
+        String sql = "select count(0) as total,md5sum,group_concat(idVideo)  as idVideos from video where md5sum = '"+md5Sum+"' group by md5sum having total>1 order by  total desc";
+        List<Map<String, Object>> list = getJdbcTemplate().queryForList(sql);
+        if(list.isEmpty()){
+            return new ArrayList<>();
+        }
+        return list.stream().map(Duplicated::new).collect(Collectors.toList());
     }
 
     public List<Map<String,Object>> getListMD5(){

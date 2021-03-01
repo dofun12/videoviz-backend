@@ -7,9 +7,8 @@ import java.nio.file.Paths;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
-import java.util.Date;
-import java.util.Random;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Utils {
     static String abc = "abcdefghijklmnopgrstuvxyz";
@@ -18,6 +17,53 @@ public class Utils {
             return 'a';
         }
         return abc.charAt(i);
+    }
+
+    public static Integer toInt(Object object) {
+        if (object == null) return null;
+        if (object instanceof String) {
+            try {
+                String strNum = (String) object;
+                return Integer.parseInt(strNum);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        if (object instanceof Long) {
+            Long longNumber = (Long) object;
+            return longNumber.intValue();
+        }
+        if (object instanceof Integer) {
+            return (Integer) object;
+        }
+        return null;
+    }
+
+    public static String toStr(Object object) {
+        if (object == null) return null;
+        if (object instanceof String) {
+            return (String) object;
+        }
+        return object.toString();
+    }
+
+    public static List<Integer> toListInt(Object object) {
+        if (object == null) return null;
+        String listAsString = object.toString();
+
+        List<Integer> list = new ArrayList<>();
+        if (listAsString.isEmpty()) {
+            return list;
+        }
+        if (!listAsString.contains(",")) {
+            return list;
+        }
+        String[] arrayString = listAsString.split(",");
+        return Arrays.stream(arrayString)
+                .map(String::trim)
+                .map(Utils::toInt)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     public static String getRandomString(int maxLength){

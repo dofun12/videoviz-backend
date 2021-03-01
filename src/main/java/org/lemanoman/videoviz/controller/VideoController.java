@@ -18,6 +18,7 @@ import org.lemanoman.videoviz.repositories.*;
 import org.lemanoman.videoviz.service.TagService;
 import org.lemanoman.videoviz.service.VideoDownloadService;
 import org.lemanoman.videoviz.service.VideoFileService;
+import org.lemanoman.videoviz.service.VideoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -55,6 +56,9 @@ public class VideoController {
     private VideoRepository videoRepository;
 
     @Autowired
+    private VideoService videoService;
+
+    @Autowired
     private VideoUrlsRepository videoUrlsRepository;
 
     @Autowired
@@ -78,73 +82,12 @@ public class VideoController {
         }
     }
 
-    private Resposta getFileInfo(VideoModel videoModel){
-        if(videoModel==null){
-            return new Resposta().failed("Video not found on db");
-        }
-        ObjectMapper mapper = new ObjectMapper();
-        ObjectNode videoNode = mapper.createObjectNode();
-        videoNode.put("code",videoModel.getCode());
-        videoNode.put("idVideo",videoModel.getIdVideo());
-        videoNode.put("md5sum",videoModel.getMd5Sum());
-        videoNode.put("favorite",videoModel.getFavorite());
-        videoNode.put("title",videoModel.getTitle());
-        videoNode.put("rating",videoModel.getRating());
-        if(videoModel.getVideoUrls()!=null){
-            videoNode.put("pageUrl",videoModel.getVideoUrls().getPageUrl());
-        }
-        videoNode.put("tags",tagService.getTagsByIdVideo(videoModel.getIdVideo()));
-
-        videoNode.put("totalWatched",videoModel.getTotalWatched());
-        videoNode.put("original_tags",videoModel.getOriginalTags());
-        videoNode.put("favorite",videoModel.getFavorite());
-        videoNode.put("idLocation",videoModel.getIdLocation());
-        videoNode.put("dateAdded",videoModel.getDateAdded().getTime());
-
-        String basePath = null;
-        LocationModel locationModel = locationRepository.findById(videoModel.getIdLocation()).orElse(null);
-        if(locationModel!=null && locationModel.getPath()!=null){
-            basePath = locationModel.getPath();
-            videoNode.put("image_link",ServletUriComponentsBuilder.fromCurrentContextPath()
-                    .path("/media")
-                    .path("/image")
-                    .path("/")
-                    .path(locationModel.getContext())
-                    .path("/")
-                    .path(videoModel.getCode())
-                    .queryParam("time", new Date().getTime()/1000)
-                    .toUriString());
-            videoNode.put("video_link",ServletUriComponentsBuilder.fromCurrentContextPath()
-                    .path("/media")
-                    .path("/video")
-                    .path("/")
-                    .path(locationModel.getContext())
-                    .path("/")
-                    .path(videoModel.getCode())
-                    .toUriString());
-        }
-        videoNode.put("basePath",basePath);
-
-        File mp4File = videoFileService.getFileByVideoModel(locationRepository,videoModel);
-        if(mp4File==null|| !mp4File.exists()){
-            videoNode.put("fileexists",false);
-            return new Resposta(videoNode);
-        }
-        videoNode.put("fileexists",true);
-        ObjectNode fileNode = mapper.createObjectNode();
-        fileNode.put("file_size",mp4File.length());
-        fileNode.put("filename",mp4File.getName());
-        fileNode.put("path",mp4File.getAbsolutePath());
-        fileNode.put("actual_md5Sum", Utils.getMD5SumJava(mp4File));
-        videoNode.set("file",fileNode);
-        return new Resposta(videoNode).success();
-    }
 
     @GetMapping("/md5/{md5Hash}")
     public Resposta getByHash(@PathVariable String md5Hash) {
         try {
-            VideoModel videoModel = videoRepository.getByMd5Sum(md5Hash);
-            return getFileInfo(videoModel);
+            VideoModel videoModel = videoRepository.findByMd5Sum(md5Hash).get(0);
+            return videoService.getFileInfo(videoModel);
         } catch (Exception ex) {
             return new Resposta().failed(ex);
         }
@@ -154,7 +97,7 @@ public class VideoController {
     public Resposta getFileByCode(@PathVariable String code) {
         try {
             VideoModel videoModel = videoRepository.getByCode(code);
-            return getFileInfo(videoModel);
+            return videoService.getFileInfo(videoModel);
         } catch (Exception ex) {
             return new Resposta().failed(ex);
         }
@@ -164,7 +107,7 @@ public class VideoController {
     public Resposta getFileByCode(@PathVariable Integer idVideo) {
         try {
             VideoModel videoModel = videoRepository.getByIdVideo(idVideo);
-            return getFileInfo(videoModel);
+            return videoService.getFileInfo(videoModel);
         } catch (Exception ex) {
             return new Resposta().failed(ex);
         }
@@ -495,7 +438,7 @@ public class VideoController {
                     }
                 }
                 return new Resposta(videoJSList).success();
-            }else{
+            } else {
                 return new Resposta().failed("Localizacao Invalida");
             }
 
@@ -598,14 +541,14 @@ public class VideoController {
     public Resposta rebuild(@PathVariable("code") String code) {
         try {
             VideoModel videoModel = videoRepository.getByCode(code);
-            if(videoModel==null){
-                return  new Resposta().failed("video with code id"+code+" was not founded");
+            if (videoModel == null) {
+                return new Resposta().failed("video with code id" + code + " was not founded");
             }
             LocationModel locationModel = locationRepository.findById(videoModel.getIdLocation()).orElse(null);
-            if(locationModel==null){
-                return  new Resposta().failed(videoModel.getIdLocation()+" location not found of "+videoModel.getIdVideo());
+            if (locationModel == null) {
+                return new Resposta().failed(videoModel.getIdLocation() + " location not found of " + videoModel.getIdVideo());
             }
-            File mp4File = videoFileService.getVideoFileByCode(locationModel.getPath(),code);
+            File mp4File = videoFileService.getVideoFileByCode(locationModel.getPath(), code);
             if (mp4File.isFile() && mp4File.exists()) {
                 File image = videoFileService.createPreviewImage(mp4File);
                 if (image.exists()) {
