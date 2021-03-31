@@ -194,6 +194,18 @@ public class VideoDownloadService {
                     }
                 }
 
+                private VideoModel getByMD5Sum(String md5Sum){
+                    try {
+                        List<VideoModel> list = videoRepository.findByMd5Sum(md5Sum);
+                        if(list==null|| list.isEmpty()){
+                            return null;
+                        }
+                        return list.get(0);
+                    }catch (Exception ex){
+                        return null;
+                    }
+                }
+
                 @Override
                 public void onFinished(DownloadQueue downloadQueue, File file) {
                     LocationModel locationModel = locationRepository.findById(downloadQueue.getIdLocation()).orElse(null);
@@ -210,7 +222,7 @@ public class VideoDownloadService {
                     downloadQueueRepository.saveAndFlush(tmp);
                     removeFromUsedPages(downloadQueue.getPageUrl());
 
-                    VideoModel videoModel = videoRepository.findByMd5Sum(md5Sum).get(0);
+                    VideoModel videoModel = getByMD5Sum(md5Sum);
                     if (videoModel != null && videoModel.getCode() != null) {
                         File possibleDestinationFile = videoFileService.getVideoFileByCode(locationModel.getPath(),videoModel.getCode());
                         if (possibleDestinationFile.exists() && possibleDestinationFile.length() > 0) {
