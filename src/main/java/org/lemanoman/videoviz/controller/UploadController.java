@@ -95,6 +95,7 @@ public class UploadController {
 
                             VideoJS videoJS = new VideoJS();
                             videoJS.setCode(code);
+                            videoJS.setTitle(videoModel.getTitle());
                             videoJS.setIdVideo(videoModel.getIdVideo());
                             videoJS.setMd5Sum(storeResult.getMd5sum());
                             String imageUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
